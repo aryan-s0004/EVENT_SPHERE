@@ -1,0 +1,103 @@
+## EVENTSPHERE SYSTEM DATA
+
+Documentation Location:
+- Primary project notes now live under the `docs/` folder
+
+Last Updated: 2026-04-09
+
+Admin:
+Email: aryansahu0004@gmail.com
+Password: 12345678
+
+Users:
+
+1. Aryan
+Email: aryancoder999@gmail.com
+Password: 1234567890
+
+2. Dinkar Kumar
+Email: aryanhashcoder009@gmail.com
+Password: ABCD1234
+
+Database:
+- users PASS
+- events PASS
+- bookings PASS
+
+Collections Found:
+- users
+- events
+- bookings
+
+Missing Collections:
+- None
+
+Flow:
+- Free -> Auto approved
+- Paid -> Pending -> Admin decision
+
+Live DB Validation:
+- Admin exists with role `admin`
+- Aryan exists with role `user`
+- Dinkar Kumar exists with role `user`
+- All required user passwords are stored as hashed values
+- No duplicate entries found for required emails
+- Existing realistic events already present in MongoDB
+- Paid events normalized to `approvalRequired: true`
+- Free events normalized to `approvalRequired: false`
+
+System Rules Now Active:
+- Admin cannot create bookings
+- Free bookings confirm immediately
+- Paid bookings wait for admin review
+- One active booking per user per event
+- Seat overbooking prevented
+- Available seats cannot go negative
+- Startup seed now creates default access accounts only if they are missing
+- Existing users are no longer overwritten on each server boot
+- Starter events remain a one-time bootstrap when the events collection is empty
+- Ongoing event, user, and booking data is API-driven and database-backed
+
+Latest Verified Test Results:
+- Admin login: PASS
+- User login: PASS
+- Event listing: PASS
+- Free booking -> approved: PASS
+- Paid booking -> pending: PASS
+- Admin reject on paid booking: PASS
+- User bookings reflect updated statuses: PASS
+- Backend syntax after auth/UI/doc updates: PASS
+- Frontend production build after auth/UI/doc updates: PASS
+
+Current UI Status Labels:
+- pending -> Waiting for approval
+- approved -> Confirmed
+- rejected -> Declined
+- cancelled -> Cancelled
+
+Documentation + Auth Flow Updates:
+- `Podcast_Project.txt` created in root with full project explanation
+- Forgot password now follows a real 3-screen flow:
+  1. email submission
+  2. OTP verification
+  3. new password + confirm password
+- OTP verification and password reset are no longer combined in one step
+- Custom confirmation modal added for booking cancellation and event deletion
+- Toast-based feedback retained for success and error states
+
+Pending Work:
+- Analytics dashboard
+- Payment integration
+- Automated tests
+- Deployment verification
+
+Notes:
+- Existing event schema uses `location` as the venue field
+- Existing realistic events were retained; no destructive reset was performed
+- No hardcoded event or booking arrays are used in the main frontend source screens
+- Static category and status maps are UI metadata, not business data
+- Booking status update is available through:
+  - `PUT /api/bookings/:id/status`
+  - existing admin route remains compatible
+- Google login remains optional and depends on valid Google OAuth credentials in env
+- OTP email delivery depends on SMTP env configuration; console fallback exists for development

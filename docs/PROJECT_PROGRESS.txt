@@ -1,0 +1,234 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                     EVENTSPHERE – PROJECT PROGRESS                          ║
+║                     Last Updated: April 2026                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECH STACK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Frontend:
+  - React 18 (Vite)
+  - React Router DOM v6 (client-side routing)
+  - Axios (HTTP client with interceptors)
+  - React Hot Toast (notifications)
+  - @react-oauth/google (Google OAuth)
+  - Pure CSS (CSS Custom Properties, no UI framework)
+
+Backend:
+  - Node.js + Express 4
+  - Mongoose 8 (MongoDB ODM)
+  - jsonwebtoken (JWT auth)
+  - bcryptjs (password hashing)
+  - nodemailer (email)
+  - multer (file uploads)
+  - express-validator (input validation)
+  - google-auth-library (Google token verification)
+  - cookie-parser, cors, dotenv
+
+Database:
+  - MongoDB Atlas (cloud-hosted)
+
+Deployment:
+  - Frontend: Vercel (static, rewrites to index.html)
+  - Backend: Vercel (serverless via api/index.js)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FEATURES IMPLEMENTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Authentication:
+  ✅ Email + password registration (OTP email verification)
+  ✅ Login with JWT token (stored in localStorage)
+  ✅ Google OAuth login / registration
+  ✅ Forgot password via OTP reset
+  ✅ 60-second OTP resend cooldown + 10-minute OTP expiry
+  ✅ Dual login (admin + user simultaneously in different tabs/devices)
+  ✅ JWT auto-expiry handling (clears session, redirects to login)
+  ✅ Profile edit (name, phone, avatar upload)
+
+Events:
+  ✅ Create events (admin only, with image upload)
+  ✅ Edit events (admin only, validates seat constraints)
+  ✅ Delete events (cascades bookings)
+  ✅ Toggle active/inactive (admin only)
+  ✅ Public event listing (pagination, search by title/location, category filter)
+  ✅ Event detail page (live seat count, 5s polling)
+  ✅ Images stored as base64 data URIs (Vercel-compatible, no disk writes)
+
+Bookings:
+  ✅ Instant booking (if approvalRequired=false → immediately approved, seats deducted atomically)
+  ✅ Approval booking (if approvalRequired=true → pending, seats deducted only on admin approval)
+  ✅ Race condition protection (atomic findOneAndUpdate with seat check)
+  ✅ Unique booking constraint per user per event (pending/approved only)
+  ✅ User can cancel pending or approved bookings (restores seats if approved)
+  ✅ Admin approve/reject pending bookings
+  ✅ Auto-rejection if seats exhausted during approval
+  ✅ Admin dashboard with live booking updates (5s polling)
+
+Email Notifications (Nodemailer + Gmail SMTP):
+  ✅ OTP for email verification on registration
+  ✅ OTP for password reset
+  ✅ Booking request submitted (pending approval)
+  ✅ Booking confirmed (instant confirmation)
+  ✅ Booking approved (admin approved)
+  ✅ Booking rejected (admin rejected or auto-rejected due to no seats)
+  ✅ Emails are fire-and-forget (email failures do NOT crash booking flow)
+  ✅ HTML email templates with professional styling
+
+UI/UX:
+  ✅ Light mode (default)
+  ✅ Dark mode (toggle in navbar, persisted in localStorage)
+  ✅ CSS Custom Properties for full theme switching
+  ✅ Sticky navbar with theme toggle
+  ✅ Loading spinners (CSS animation)
+  ✅ Toast notifications (success, error)
+  ✅ Empty state UI with icons on all list pages
+  ✅ Hover effects on event cards
+  ✅ Responsive design (mobile/tablet/desktop)
+  ✅ Gradient hero section on home page
+  ✅ Stats bar (event counts, booking stats)
+  ✅ Admin dashboard stats row
+  ✅ Category color-coding (Tech=blue, Sports=green, Business=purple, etc.)
+  ✅ Back navigation on event detail page
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SAMPLE DATA SEEDED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+10 events auto-seeded on first startup (if events collection is empty):
+
+ 1. Tech Conference 2026     – Seminar Hall A1     – Rs 499  – Tech
+ 2. AI & ML Workshop         – Block C1, Lab 3     – Rs 299  – Tech  [Approval]
+ 3. Hackathon Sprint 2026    – Open Hall            – Free    – Tech
+ 4. Cricket Tournament       – Ground Arena         – Rs 50   – Sports
+ 5. Robotics Expo            – Block D2             – Rs 99   – Tech  [Approval]
+ 6. Startup Pitch Fest       – Seminar Hall A2      – Rs 149  – Business [Approval]
+ 7. Coding Contest CodeStorm – Lab C3               – Free    – Tech
+ 8. Basketball Championship  – Sports Complex       – Rs 75   – Sports
+ 9. Cybersecurity Meetup     – Block D5             – Free    – Tech
+10. Web Dev Bootcamp         – Seminar Hall A3      – Rs 399  – Tech  [Approval]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BUGS FIXED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ Booking approval email now populates date, time, location from event
+     (was only fetching title/seats/status in processBooking populate)
+  ✅ Events page "Book" button now redirects to /my-bookings after booking
+     (previously stayed on events page, inconsistent with EventDetail)
+  ✅ EventDetail useEffect dependency array now correctly uses [id]
+  ✅ Profile avatar shows live preview before saving
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECURITY CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ JWT authentication on all protected routes
+  ✅ Password hashed with bcryptjs (salt=10)
+  ✅ Admin routes protected by adminOnly middleware
+  ✅ CORS whitelist (origin validation, no wildcard in prod)
+  ✅ Admins cannot create bookings
+  ✅ Users can only cancel their own bookings
+  ✅ OTP expiry (10 minutes) + resend cooldown (60 seconds)
+  ✅ Input validation via express-validator
+  ✅ Rate limiting by OTP cooldown (not per-IP, relies on OTP logic)
+  ✅ No hardcoded credentials (all from env vars)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DEPLOYMENT SETUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BACKEND (Vercel – separate project from /backend folder):
+  Required Environment Variables:
+    MONGO_URI         = mongodb+srv://<user>:<pass>@cluster.mongodb.net/eventsphere
+    JWT_SECRET        = <long random string>
+    JWT_EXPIRE        = 7d
+    EMAIL_HOST        = smtp.gmail.com
+    EMAIL_PORT        = 587
+    EMAIL_USER        = your@gmail.com
+    EMAIL_PASS        = <Gmail App Password (NOT regular password)>
+    GOOGLE_CLIENT_ID  = <from Google Cloud Console>
+    CLIENT_URL        = https://your-frontend.vercel.app
+    ALLOW_VERCEL_PREVIEWS = true
+    ADMIN_EMAIL       = admin@example.com
+    ADMIN_PASSWORD    = <strong password>
+
+  vercel.json rewrites all requests to api/index.js
+
+FRONTEND (Vercel – separate project from /frontend folder):
+  Required Environment Variables:
+    VITE_API_BASE_URL    = https://your-backend.vercel.app/api
+    VITE_GOOGLE_CLIENT_ID = <same as backend>
+
+  vercel.json rewrites all paths to /index.html (SPA routing)
+
+DEPLOYMENT ORDER:
+  1. Deploy backend first
+  2. Get backend URL from Vercel
+  3. Set VITE_API_BASE_URL in frontend env to that URL
+  4. Set CLIENT_URL in backend env to your frontend URL
+  5. Deploy frontend
+  6. Verify /health endpoint returns { status: "ok" }
+
+MONGODB ATLAS SETUP:
+  - Whitelist all IPs (0.0.0.0/0) for Vercel serverless
+  - Or add Vercel IP range from their docs
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TESTING SUMMARY (SMOKE TESTS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ User registration (OTP → verify → login)
+  ✅ User login (email/password)
+  ✅ Admin login (redirects to /admin dashboard)
+  ✅ Google OAuth login
+  ✅ Forgot password (OTP reset)
+  ✅ Event creation (admin only, with image)
+  ✅ Event listing (public, paginated, search/filter)
+  ✅ Event booking – instant confirmation (no approval required)
+  ✅ Event booking – pending approval (admin approves)
+  ✅ Booking reflects instantly in admin panel (5s polling)
+  ✅ Admin approves booking → email sent to user
+  ✅ Admin rejects booking → email sent to user
+  ✅ User cancels approved booking → seats restored
+  ✅ Delete event → cascades booking deletion
+  ✅ Dark mode toggle (persists across page refresh)
+  ✅ Responsive UI (mobile, tablet, desktop)
+  ✅ Dual tab sessions (admin + user simultaneously, no conflict)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+API ENDPOINTS REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Health:
+  GET  /health                       → system health (DB, email, env)
+  GET  /api/health                   → same
+
+Auth:
+  POST /api/auth/register            → create account, send OTP
+  POST /api/auth/verify-otp          → verify email OTP
+  POST /api/auth/login               → login, returns JWT
+  POST /api/auth/google              → Google OAuth
+  POST /api/auth/forgot-password     → send reset OTP
+  POST /api/auth/reset-password      → reset password with OTP
+  GET  /api/auth/profile             → get logged-in user [auth]
+  PUT  /api/auth/profile             → update name/phone/avatar [auth]
+
+Events:
+  GET  /api/events                   → list active events (search, category, pagination)
+  GET  /api/events/:id               → event detail (active only)
+  POST /api/events                   → create event [admin]
+  PUT  /api/events/:id               → update event [admin]
+  DELETE /api/events/:id             → delete event + bookings [admin]
+  GET  /api/events/admin/all         → all events including inactive [admin]
+  PATCH /api/events/admin/:id/status → toggle active/inactive [admin]
+
+Bookings:
+  POST /api/bookings                 → create booking [user]
+  GET  /api/bookings/my              → user's bookings [user]
+  PATCH /api/bookings/:id/cancel     → cancel booking [user]
+  GET  /api/bookings/admin/all       → all bookings [admin]
+  PATCH /api/bookings/admin/:id/status → approve/reject booking [admin]
+Location Note:
+- Archived under `docs/` during repository cleanup

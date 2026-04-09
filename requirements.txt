@@ -1,0 +1,42 @@
+EVENTSPHERE TEAMMATE REQUIREMENTS
+=================================
+
+This project is a MERN-style application, so this file is a setup checklist for teammates.
+It is not a Python pip requirements file.
+
+1. System Requirements
+- Node.js 18+ recommended
+- npm 9+ recommended
+- Git installed
+- MongoDB Atlas database access or your own MongoDB URI
+
+2. Optional Services
+- Gmail App Password for OTP email sending
+- Google OAuth Client ID if Google sign-in is needed
+- Vercel account for frontend deployment
+- Render account for backend deployment
+
+3. Clone and Install
+- Clone the repository
+- Run `npm install` inside `backend/`
+- Run `npm install` inside `frontend/`
+
+4. Environment Files
+- Copy `backend/.env.example` to `backend/.env`
+- Copy `frontend/.env.example` to `frontend/.env`
+- Update values before running locally
+
+5. Local Run Commands
+- Backend: `cd backend && npm run dev`
+- Frontend: `cd frontend && npm run dev`
+
+6. Important Notes
+- Do not commit real `.env` files
+- Do not commit secrets, app passwords, or production tokens
+- Use the docs folder for setup, architecture, and GitHub guidance
+
+Useful files:
+- `README.md`
+- `docs/Podcast_Project.txt`
+- `docs/github_setup.txt`
+- `docs/xyz.txt`

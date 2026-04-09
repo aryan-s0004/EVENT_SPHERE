@@ -1,0 +1,166 @@
+EVENTSPHERE - PROJECT PROGRESS
+================================
+Last Updated: 2026-04-08
+
+STATUS: FRONTEND RUNNING OK | BACKEND NEEDS CORRECT MONGO_URI + MUST BE STARTED
+
+=================================
+COMPLETED SO FAR
+=================================
+
+PHASE 1 — PROJECT SCAFFOLD
+---------------------------
+[x] Folder structure created (backend + frontend)
+[x] backend/package.json — all dependencies defined
+[x] frontend/package.json — React + Vite + axios + react-router-dom
+[x] npm install done in both folders
+[x] vite.config.js — proxy /api and /uploads → http://localhost:5000
+
+PHASE 2 — BACKEND BUILT
+------------------------
+[x] server.js — Express app, CORS, global error handler
+[x] config/db.js — MongoDB Atlas connect (fixed: no crash on fail)
+[x] models/User.js — name, email, password, role, OTP fields, Google ID, avatar
+[x] models/Event.js — title, date, seats, price, status (pending/approved/rejected)
+[x] models/Booking.js — user ref, event ref, seats, totalPrice, status
+[x] middleware/auth.js — JWT protect + adminOnly guard
+[x] utils/sendEmail.js — Nodemailer SMTP (fixed: port as Number, secure:false)
+[x] utils/generateOTP.js — 6-digit OTP generator
+[x] controllers/authController.js — 8 exports: register, verifyOTP, login,
+    googleAuth, forgotPassword, resetPassword, getProfile, updateProfile
+    (fixed: was partially overwritten, all exports restored)
+[x] controllers/eventController.js — getEvents, getEvent, createEvent,
+    updateEvent, deleteEvent, getAllEventsAdmin, updateEventStatus
+[x] controllers/bookingController.js — bookEvent, getUserBookings,
+    cancelBooking, getAllBookings
+[x] routes/authRoutes.js — /api/auth/*
+[x] routes/eventRoutes.js — /api/events/*
+[x] routes/bookingRoutes.js — /api/bookings/*
+[x] uploads/ folder created
+
+PHASE 3 — FRONTEND BUILT
+--------------------------
+[x] index.css — white clean UI, .container class
+[x] main.jsx — ReactDOM root with CSS import
+[x] App.jsx — all routes with PrivateRoute + GoogleOAuthProvider
+[x] context/AuthContext.jsx — global user state, login/logout
+[x] services/api.js — axios instance with JWT interceptor
+[x] components/Navbar.jsx — brand, nav links, avatar + name after login, rounded buttons
+[x] components/PrivateRoute.jsx — auth guard + adminOnly guard
+[x] pages/Home.jsx — hero + upcoming events list
+[x] pages/Events.jsx — simple list, Book button, "Full" / seats left
+[x] pages/EventDetail.jsx — full view, seat picker, Book Now / Sold Out
+[x] pages/MyBookings.jsx — bookings list, Booked/Cancelled badge, Cancel
+[x] pages/Profile.jsx — avatar, name, phone, admin badge, update form
+[x] pages/Login.jsx — email+pass + Google login button
+[x] pages/Register.jsx — 2 steps: form → OTP verify
+[x] pages/ForgotPassword.jsx — 2 steps: email → OTP → new password
+[x] pages/AdminDashboard.jsx — events table + bookings table + create/edit form
+
+PHASE 4 — UI POLISH
+--------------------
+[x] Dark theme → White clean theme applied
+[x] Rounded nav buttons (20px border-radius)
+[x] User name + avatar shown in navbar after login
+[x] Admin badge on profile page
+[x] "Booked" / "Cancelled" / "Full" status labels on all pages
+[x] Consistent card layout across Events, MyBookings, Home
+
+PHASE 5 — BUG FIXES APPLIED
+------------------------------
+[x] ECONNREFUSED root cause identified:
+    Backend was not running / crashed before listening
+[x] db.js — removed process.exit(1) on MongoDB fail
+    Server now starts even if DB connection fails
+[x] authController.js — restored all 8 missing exports
+    (partial user edit left only register function)
+[x] server.js — CORS fallback to http://localhost:5173 if env missing
+[x] sendEmail.js — port cast to Number, secure:false for port 587
+[x] register endpoint — allows OTP resend for existing unverified users
+
+=================================
+ENV STATUS
+=================================
+
+backend/.env:
+  PORT=5000                          [x] set
+  MONGO_URI=...cluster.mongodb.net   [!] WRONG — needs real Atlas hostname
+  JWT_SECRET=eventsphere_jwt_...     [x] set
+  JWT_EXPIRE=7d                      [x] set
+  EMAIL_HOST=smtp.gmail.com          [x] set
+  EMAIL_PORT=587                     [x] set
+  EMAIL_USER=aryansahu0004@gmail.com [x] set
+  EMAIL_PASS=uhtxvfiddmtiwkbk        [x] app password set
+  GOOGLE_CLIENT_ID=510088075115-...  [x] set
+  CLIENT_URL=http://localhost:5173   [x] set
+
+frontend/.env:
+  VITE_GOOGLE_CLIENT_ID=510088075115-... [x] set
+
+=================================
+PENDING — MUST DO BEFORE TESTING
+=================================
+
+[ ] 1. Fix MONGO_URI:
+       Go to cloud.mongodb.com
+       → Connect → Drivers → copy URI
+       Real format: mongodb+srv://aryan:PASSWORD@cluster0.XXXXX.mongodb.net/EVENTSPHERE?retryWrites=true&w=majority
+       Replace in backend/.env
+
+[ ] 2. Atlas Network Access:
+       cloud.mongodb.com → Network Access → Add IP → 0.0.0.0/0
+
+[ ] 3. Start backend in Terminal 1:
+       cd D:\EVENTSPHERE\backend
+       npm run dev
+       Expected: "Server running on port 5000" + "MongoDB connected"
+
+[ ] 4. Start frontend in Terminal 2:
+       cd D:\EVENTSPHERE\frontend
+       npm run dev
+       Expected: http://localhost:5173
+
+[ ] 5. Test full flow:
+       Register → receive OTP email → verify → login → book event
+
+[ ] 6. Create first admin:
+       Register normally → go to MongoDB Atlas → find user → set role: "admin"
+
+=================================
+API ROUTES REFERENCE
+=================================
+
+AUTH:
+  POST   /api/auth/register
+  POST   /api/auth/verify-otp
+  POST   /api/auth/login
+  POST   /api/auth/google
+  POST   /api/auth/forgot-password
+  POST   /api/auth/reset-password
+  GET    /api/auth/profile          (JWT required)
+  PUT    /api/auth/profile          (JWT required)
+
+EVENTS:
+  GET    /api/events                (public)
+  GET    /api/events/:id            (public)
+  GET    /api/events/admin/all      (admin)
+  POST   /api/events                (admin)
+  PUT    /api/events/:id            (admin)
+  DELETE /api/events/:id            (admin)
+  PATCH  /api/events/admin/:id/status (admin)
+
+BOOKINGS:
+  POST   /api/bookings              (JWT required)
+  GET    /api/bookings/my           (JWT required)
+  PATCH  /api/bookings/:id/cancel   (JWT required)
+  GET    /api/bookings/admin/all    (admin)
+
+=================================
+NEXT OPTIONS (AFTER SYSTEM WORKS)
+=================================
+A) Deploy — Vercel (frontend) + Render (backend)
+B) Real-time seat refresh (polling)
+C) Payment simulation
+D) Email booking confirmation
+Location Note:
+- Archived under `docs/` during repository cleanup

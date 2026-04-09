@@ -1,12 +1,26 @@
 {
   "name": "eventsphere",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
+  "description": "EventSphere — full-stack event management platform deployed on Vercel",
   "scripts": {
-    "dev:backend": "npm --prefix backend run dev",
-    "dev:frontend": "npm --prefix frontend run dev",
-    "start": "npm --prefix backend run start",
-    "build": "npm --prefix frontend run build",
+    "dev": "vercel dev",
+    "build": "cd client && npm install && npm run build",
+    "install:client": "cd client && npm install",
+    "install:all": "npm install && cd client && npm install",
+    "dev:client": "npm --prefix client run dev",
     "db:reset": "npm --prefix backend run db:reset"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1",
+    "google-auth-library": "^9.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.3",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^8.0.5"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 }

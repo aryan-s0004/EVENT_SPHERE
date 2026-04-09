@@ -1,0 +1,662 @@
+================================================================================
+  EVENTSPHERE — PRODUCTION PROGRESS REPORT
+  Generated: April 2026
+  Analyst:   Senior Full-Stack Engineer Review
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. PROJECT OVERVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT IS EVENTSPHERE?
+  EventSphere is a full-stack event management and booking platform.
+  It enables users to discover, browse, and register for events, while
+  administrators can create events, manage listings, and control booking
+  approvals — all through a single unified web application.
+
+PROBLEM IT SOLVES:
+  Traditional event management systems require separate admin portals and
+  user-facing apps. EventSphere consolidates both into one deployment:
+  - Users get a clean interface to discover events and track bookings
+  - Admins get an integrated dashboard without a separate admin app
+  - Organisers can configure paid events (admin-approval required) or
+    free events (auto-approved instantly)
+  - No payment gateway complexity — approval-based flow for paid events
+
+TECH STACK:
+  ┌─────────────────┬────────────────────────────────────────────────────┐
+  │ Layer           │ Technology                                         │
+  ├─────────────────┼────────────────────────────────────────────────────┤
+  │ Frontend        │ React 18, Vite 5, React Router v6, Axios           │
+  │ UI / Notify     │ React Hot Toast, custom CSS, ThemeContext           │
+  │ Backend         │ Node.js, Express 4 (local) / Vercel Serverless     │
+  │ Database        │ MongoDB Atlas (Mongoose ODM)                        │
+  │ Authentication  │ JWT (jsonwebtoken) + Google OAuth (optional)        │
+  │ Email           │ Nodemailer (Gmail SMTP) with console fallback       │
+  │ File Uploads    │ Multer (in-memory, base64 data URI to MongoDB)      │
+  │ Hosting         │ Vercel (single deployment, one domain)              │
+  └─────────────────┴────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2. CURRENT ARCHITECTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REPOSITORY STATE (as of April 2026):
+  Two parallel versions exist — what is on GitHub vs what is local.
+
+  ── GitHub (Remote) ──────────────────────────────────────────────────────────
+  Only the frontend/ folder is currently pushed to the repository.
+  The backend was developed locally but not yet committed/pushed.
+  The new Vercel serverless architecture (api/ + lib/) is also local only.
+
+  ── Local (D:\EVENT_SPHERE) ──────────────────────────────────────────────────
+  The project has been fully refactored into a Vercel-native architecture:
+
+  EVENT_SPHERE/
+  │
+  ├── api/                    ← Vercel Serverless Functions (backend)
+  │   ├── auth/               ← 8 auth endpoint files
+  │   │   ├── register.js         POST /api/auth/register
+  │   │   ├── verify-otp.js       POST /api/auth/verify-otp
+  │   │   ├── login.js            POST /api/auth/login
+  │   │   ├── google.js           POST /api/auth/google
+  │   │   ├── forgot-password.js  POST /api/auth/forgot-password
+  │   │   ├── verify-reset-otp.js POST /api/auth/verify-reset-otp
+  │   │   ├── reset-password.js   POST /api/auth/reset-password
+  │   │   └── profile.js          GET|PUT /api/auth/profile
+  │   │
+  │   ├── events/             ← 6 event endpoint files + admin subfolder
+  │   │   ├── index.js            GET /api/events + POST /api/events
+  │   │   ├── [id].js             GET|PUT|DELETE /api/events/:id
+  │   │   ├── getAll.js           GET /api/events/getAll (alias)
+  │   │   ├── create.js           POST /api/events/create (alias)
+  │   │   ├── register.js         POST /api/events/register (booking)
+  │   │   └── admin/
+  │   │       ├── all.js          GET /api/events/admin/all
+  │   │       └── [id]/status.js  PATCH /api/events/admin/:id/status
+  │   │
+  │   ├── bookings/           ← 5 booking endpoint files + admin subfolder
+  │   │   ├── index.js            POST /api/bookings
+  │   │   ├── my.js               GET /api/bookings/my
+  │   │   ├── [id]/cancel.js      PATCH /api/bookings/:id/cancel
+  │   │   └── admin/
+  │   │       ├── all.js          GET /api/bookings/admin/all
+  │   │       └── [id]/status.js  PATCH /api/bookings/admin/:id/status
+  │   │
+  │   ├── users/profile.js    ← GET|PUT /api/users/profile (alias)
+  │   └── health.js           ← GET /api/health
+  │
+  ├── lib/                    ← Shared backend logic (imported by api/)
+  │   ├── db.js               ← MongoDB connection with serverless caching
+  │   ├── auth.js             ← JWT helpers + withAuth/withAdminAuth wrappers
+  │   └── models/             ← Mongoose schemas
+  │       ├── User.js
+  │       ├── Event.js
+  │       └── Booking.js
+  │   └── utils/
+  │       ├── apiError.js
+  │       ├── sendEmail.js
+  │       ├── generateOTP.js
+  │       └── fileToDataUri.js
+  │
+  ├── client/                 ← React/Vite SPA (renamed from frontend/)
+  │   ├── src/
+  │   │   ├── pages/          ← 9 full pages
+  │   │   ├── components/     ← Navbar, PrivateRoute, ConfirmModal
+  │   │   ├── context/        ← AuthContext, ThemeContext
+  │   │   └── services/       ← api.js (Axios), authStorage.js
+  │   ├── vite.config.js      ← dev proxy: /api → localhost:5000
+  │   └── package.json
+  │
+  ├── backend/                ← Legacy Express app (local dev reference only)
+  │
+  ├── vercel.json             ← Build + routing configuration
+  ├── package.json            ← Root dependencies for serverless functions
+  ├── .env.example            ← Complete environment variable template
+  └── README.md               ← Full production documentation
+
+WHY SEPARATE LAYERS?
+
+  api/ (Serverless Functions):
+    Each file is one HTTP endpoint. Vercel deploys them independently as
+    isolated Lambda-style functions. No persistent server process —
+    no app.listen(), no port binding. Vercel manages the infrastructure.
+    This means: zero server management, auto-scaling, pay-per-request.
+
+  lib/ (Shared Logic):
+    Controllers, models, and utilities live here so they are imported by
+    multiple api/ functions without duplication. This is the equivalent
+    of the src/ directory in a traditional backend, abstracted away from
+    the HTTP layer.
+
+  client/ (React SPA):
+    The entire frontend is a Single-Page Application built by Vite.
+    After `npm run build`, output is static HTML/CSS/JS placed in
+    client/dist/ — served by Vercel's CDN with zero server cost.
+    All API calls use relative /api/... paths (same domain — no CORS).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  3. PROGRESS SO FAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMPLETED FEATURES:
+
+  Authentication System                                        [COMPLETE]
+  ─────────────────────────────────────────────────────────────────────
+  ✓ Email/password registration with 6-digit OTP verification
+  ✓ OTP expiry (10 minutes) with resend cooldown (60 seconds)
+  ✓ JWT-based session management (7-day expiry)
+  ✓ Secure token storage in SessionStorage (clears on browser close)
+  ✓ Auto-logout on token expiry (401 interceptor)
+  ✓ Google OAuth sign-in via @react-oauth/google + google-auth-library
+  ✓ Forgot password → OTP → verify OTP → reset password (3-step flow)
+  ✓ Password hashing with bcryptjs (10 salt rounds)
+  ✓ Role-based access: user / admin (enforced server-side)
+
+  Event Management                                             [COMPLETE]
+  ─────────────────────────────────────────────────────────────────────
+  ✓ Public event listing with pagination
+  ✓ Filter by category and full-text search (title, location)
+  ✓ Individual event detail page
+  ✓ Admin: create events with image upload (2MB, base64 stored in DB)
+  ✓ Admin: update event details and image
+  ✓ Admin: soft-delete events (removes all associated bookings)
+  ✓ Admin: toggle event status active/inactive
+  ✓ availableSeats auto-management (set from totalSeats on create)
+  ✓ approvalRequired flag driven by price (paid = true, free = false)
+
+  Booking System                                               [COMPLETE]
+  ─────────────────────────────────────────────────────────────────────
+  ✓ Free event booking: auto-approved, seats deducted atomically
+  ✓ Paid event booking: pending → admin approval flow
+  ✓ Duplicate booking prevention (unique index with partial filter)
+  ✓ Cancel booking (restores seats if booking was approved)
+  ✓ My Bookings page with event population
+  ✓ Admin: view all pending/processed bookings
+  ✓ Admin: approve booking → deducts seats atomically
+  ✓ Admin: reject booking → seat inventory unchanged
+  ✓ Race condition handled: event-full auto-rejection during approval
+
+  Email Notifications                                          [COMPLETE]
+  ─────────────────────────────────────────────────────────────────────
+  ✓ OTP delivery for registration
+  ✓ OTP delivery for password reset
+  ✓ Booking submitted (pending) email
+  ✓ Booking confirmed (free, auto-approved) email
+  ✓ Booking approved (admin action) email
+  ✓ Booking rejected email
+  ✓ Fire-and-forget email pattern (email failure never crashes booking)
+  ✓ Console fallback when SMTP not configured (OTP_CONSOLE_FALLBACK)
+
+  Frontend UI                                                  [COMPLETE]
+  ─────────────────────────────────────────────────────────────────────
+  ✓ Home page
+  ✓ Events listing page (with search + category filter)
+  ✓ Event detail page with booking form
+  ✓ Login page (email/password + Google OAuth button)
+  ✓ Register page with OTP verification step
+  ✓ Forgot password page (3-step: email → OTP → new password)
+  ✓ My Bookings page
+  ✓ Profile page (update name, phone, avatar)
+  ✓ Admin Dashboard (event CRUD + booking approval/rejection)
+  ✓ Navbar with user menu and logout
+  ✓ PrivateRoute for auth and admin route protection
+  ✓ ConfirmModal for destructive actions
+  ✓ Light/dark theme toggle (ThemeContext)
+  ✓ Toast notifications (React Hot Toast)
+
+  Infrastructure & Config                                      [COMPLETE]
+  ─────────────────────────────────────────────────────────────────────
+  ✓ MongoDB connection with serverless-safe caching (global cache)
+  ✓ Vercel serverless function architecture (api/ folder)
+  ✓ vercel.json with build command, output directory, rewrites
+  ✓ Root package.json with all serverless dependencies
+  ✓ .env.example with documented variables
+  ✓ Vite dev proxy for local development
+  ✓ Production README with deployment steps
+
+GIT COMMIT QUALITY ASSESSMENT:
+  ┌─────────────────────────────────────────┬────────────────────────┐
+  │ Commit                                  │ Quality                │
+  ├─────────────────────────────────────────┼────────────────────────┤
+  │ refactor(ui): clean and simplify event  │ GOOD — scoped prefix   │
+  │ layout for better usability             │                        │
+  ├─────────────────────────────────────────┼────────────────────────┤
+  │ chore: setup project configuration      │ ACCEPTABLE — too broad │
+  │ and dependencies                        │ for a real diff        │
+  ├─────────────────────────────────────────┼────────────────────────┤
+  │ chore: add gitignore and environment    │ GOOD — specific        │
+  │ config template                         │                        │
+  ├─────────────────────────────────────────┼────────────────────────┤
+  │ docs: add project documentation         │ GOOD — correct type    │
+  └─────────────────────────────────────────┴────────────────────────┘
+
+  Overall: 3/5 — Conventional Commits format is followed. Needs more
+  granular commits (one feature per commit, not batch pushes).
+  Missing: feat:, fix:, test:, ci: prefixes for feature work.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  4. MISSING COMPONENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CRITICAL — MUST FIX BEFORE DEPLOYMENT:
+
+  1. GitHub is out of sync                                     [BLOCKER]
+     ─────────────────────────────────────────────────────────────────
+     The GitHub repository only contains the old frontend/ folder.
+     The complete refactored architecture (api/, lib/, client/,
+     vercel.json, updated package.json) exists only locally.
+     Vercel cannot deploy what is not on GitHub.
+
+     Fix: git add . && git commit -m "feat: vercel serverless refactor"
+          git push origin main
+
+  2. Real environment variables not configured in Vercel       [BLOCKER]
+     ─────────────────────────────────────────────────────────────────
+     MONGO_URI, JWT_SECRET, EMAIL_*, GOOGLE_CLIENT_ID must be added
+     in Vercel → Project Settings → Environment Variables before
+     deploying. The app will crash on cold start without MONGO_URI.
+
+  3. Admin seeding not implemented in serverless context       [HIGH]
+     ─────────────────────────────────────────────────────────────────
+     The old backend ran bootstrapAdmin() on server start.
+     In serverless architecture, there is no "server start" event.
+     The admin account must be seeded manually via a one-time script
+     or a protected /api/admin/seed endpoint (disabled after first run).
+
+IMPORTANT — PRODUCTION QUALITY:
+
+  4. Input validation is minimal in serverless functions       [HIGH]
+     ─────────────────────────────────────────────────────────────────
+     The old Express backend used express-validator with detailed
+     validation rules. The new serverless functions do basic presence
+     checks only. Missing:
+     - Email format validation
+     - Password complexity rules (min 8 chars enforced in reset only)
+     - Phone number format
+     - Event date must be in the future
+     - totalSeats must be a positive integer
+     - Seat count per booking must not exceed availableSeats
+
+  5. Rate limiting on auth endpoints                          [HIGH]
+     ─────────────────────────────────────────────────────────────────
+     The OTP cooldown (60s) prevents email spam but there is no
+     IP-level rate limiting. Brute-force attacks on /api/auth/login
+     are currently possible. Without a Redis store (e.g. Upstash),
+     stateless rate limiting across serverless invocations is not
+     possible. Needs: Upstash Redis + @upstash/ratelimit.
+
+  6. Image storage is not production-grade                    [MEDIUM]
+     ─────────────────────────────────────────────────────────────────
+     Event images and user avatars are stored as base64 data URIs
+     in MongoDB documents. A 2MB image becomes ~2.7MB of base64 text.
+     This bloats documents, slows queries, and will hit MongoDB's
+     16MB document size limit quickly.
+     Proper solution: Cloudinary or AWS S3 + store only the URL.
+
+  7. No request body size limit on Vercel functions           [MEDIUM]
+     ─────────────────────────────────────────────────────────────────
+     Vercel serverless functions have a default 4.5MB body limit.
+     Multer is configured for 2MB but this is only for multipart.
+     Plain JSON bodies are currently uncapped.
+
+  8. Error responses are not fully standardised               [MEDIUM]
+     ─────────────────────────────────────────────────────────────────
+     Some endpoints return { success, message, code } correctly.
+     Others return legacy { message } shape from controller logic.
+     The frontend's error handler reads error.response.data.message —
+     this works, but a strict API contract would use consistent shape.
+
+  9. No CORS headers for cross-origin clients                 [LOW]
+     ─────────────────────────────────────────────────────────────────
+     vercel.json sets CORS headers for /api/* routes. However, the
+     Access-Control-Allow-Origin is set to "*" (wildcard).
+     For production, restrict to your specific Vercel domain.
+
+  10. No logging / observability                              [LOW]
+      ─────────────────────────────────────────────────────────────────
+      console.log/error is used throughout. In production, structured
+      logging (e.g. Pino) integrated with Vercel's log drain gives
+      searchable, filterable error tracking. Currently errors are
+      visible only in Vercel's raw function logs.
+
+NOT IMPLEMENTED (future features):
+
+  - Password strength meter on the frontend
+  - Email change flow (requires re-verification)
+  - Account deletion
+  - Event categories management (hardcoded in UI)
+  - Admin analytics / dashboard stats
+  - Event search by date range
+  - Booking export (CSV/PDF)
+  - Social sharing (Open Graph meta tags)
+  - Unit / integration tests (0% test coverage)
+  - CI/CD pipeline (GitHub Actions)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  5. WHY NOT JUST frontend/ AND backend/?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The classic two-folder structure (frontend/ + backend/) works for learning
+projects but creates real problems at scale. Here is why the new architecture
+(api/ + lib/ + client/) is the correct choice:
+
+  REASON 1 — INFRASTRUCTURE ALIGNMENT
+  ─────────────────────────────────────────────────────────────────────────────
+  A traditional backend/server.js requires a persistent process running 24/7
+  on a server you pay for and maintain (Render, Railway, EC2, etc.).
+  Vercel's serverless model means each api/*.js file is a stateless function
+  invoked on demand. The infrastructure literally matches the file structure:
+  one file = one endpoint = one deployable unit.
+  There is no "backend/" because there is no persistent server.
+
+  REASON 2 — SEPARATION OF CONCERNS
+  ─────────────────────────────────────────────────────────────────────────────
+  │  Layer     │  Location  │  Responsibility                              │
+  │────────────│────────────│──────────────────────────────────────────────│
+  │  HTTP      │  api/      │  Request parsing, response formatting         │
+  │  Logic     │  lib/      │  Business rules, data access, utilities       │
+  │  Data      │  MongoDB   │  Persistence (external service)               │
+  │  UI        │  client/   │  Rendering, state, user interaction           │
+  This makes each layer independently testable and replaceable.
+  Want to switch from MongoDB to PostgreSQL? Change lib/models/ only.
+  Want to add a mobile app? It calls the same api/ endpoints.
+  A two-folder structure couples all of this together.
+
+  REASON 3 — SCALABILITY
+  ─────────────────────────────────────────────────────────────────────────────
+  With api/ as individual functions:
+  - /api/events scales independently of /api/auth
+  - A traffic spike on event listing does NOT affect booking performance
+  - Cold starts are per-function, not per-application
+  With a monolithic backend/, a slow auth route blocks the entire server.
+
+  REASON 4 — MAINTAINABILITY
+  ─────────────────────────────────────────────────────────────────────────────
+  A developer joining the project can:
+  - Open api/auth/login.js and immediately understand the login endpoint
+  - Find all database schemas in lib/models/ without reading server.js
+  - Add a new endpoint by creating one file, with zero config changes
+  With a traditional backend/, they must trace: server.js → routes/
+  → controllers/ → middleware/ → models/ — four hops to understand one route.
+
+  REASON 5 — INDUSTRY PRACTICE
+  ─────────────────────────────────────────────────────────────────────────────
+  This architecture is identical to how production applications are structured
+  at companies using Vercel/Next.js/AWS Lambda:
+  - Vercel: api/ folder pattern (used by millions of projects)
+  - Next.js: app/api/ route handlers (same concept, different framework)
+  - AWS SAM: each Lambda handler is a separate file
+  The two-folder pattern is a tutorial pattern, not a production pattern.
+
+  REASON 6 — DEPLOYMENT SIMPLICITY
+  ─────────────────────────────────────────────────────────────────────────────
+  Two-folder approach requires:
+    1. Deploy backend/ to Render/Railway (separate account, separate billing)
+    2. Deploy frontend/ to Vercel
+    3. Set CORS on backend to allow Vercel domain
+    4. Set VITE_API_BASE_URL to the backend URL
+    5. Update both whenever the backend domain changes
+    6. Pay for two hosting services
+
+  New approach requires:
+    1. Push to GitHub
+    2. One Vercel deployment
+    3. Done — frontend and backend are on the same domain
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  6. RECOMMENDED FINAL STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The current local structure IS the recommended production structure.
+The only additions for a more complete production setup:
+
+  EVENT_SPHERE/
+  │
+  ├── api/                        ← serverless functions (DONE)
+  ├── lib/                        ← shared backend logic (DONE)
+  ├── client/                     ← React SPA (DONE)
+  │
+  ├── scripts/                    ← [MISSING] one-time utility scripts
+  │   ├── seedAdmin.js            ← create first admin account
+  │   └── seedEvents.js           ← populate demo event data
+  │
+  ├── tests/                      ← [MISSING] automated tests
+  │   ├── api/
+  │   │   ├── auth.test.js
+  │   │   ├── events.test.js
+  │   │   └── bookings.test.js
+  │   └── setup.js
+  │
+  ├── .github/
+  │   └── workflows/
+  │       └── ci.yml              ← [MISSING] GitHub Actions CI pipeline
+  │
+  ├── vercel.json                 ← (DONE)
+  ├── package.json                ← (DONE)
+  ├── .env.example                ← (DONE)
+  └── README.md                   ← (DONE)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  7. NEXT STEPS — PRIORITY ROADMAP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  PRIORITY 1 — GET IT LIVE (Do this today)
+  ─────────────────────────────────────────────────────────────────────────────
+
+  Step 1: Push everything to GitHub
+    git add .
+    git commit -m "feat: complete vercel serverless architecture"
+    git push origin main
+
+  Step 2: Import on Vercel
+    - Go to vercel.com/new → Import Git Repository
+    - Framework: Other (vercel.json handles everything)
+    - Root Directory: . (project root)
+    - Build Command: cd client && npm install && npm run build
+    - Output Directory: client/dist
+
+  Step 3: Add environment variables in Vercel dashboard
+    MONGO_URI            = <your MongoDB Atlas connection string>
+    JWT_SECRET           = <64-char random hex string>
+    JWT_EXPIRE           = 7d
+    EMAIL_HOST           = smtp.gmail.com
+    EMAIL_PORT           = 587
+    EMAIL_USER           = <your Gmail>
+    EMAIL_PASS           = <Gmail App Password>
+    OTP_CONSOLE_FALLBACK = false
+    GOOGLE_CLIENT_ID     = <from Google Cloud Console>
+    ADMIN_EMAIL          = admin@yourdomain.com
+    ADMIN_PASSWORD       = <strong password>
+    VITE_API_BASE_URL    = /api
+    VITE_GOOGLE_CLIENT_ID = <same as GOOGLE_CLIENT_ID>
+
+  Step 4: Deploy and verify
+    - Hit: https://your-app.vercel.app/api/health
+    - Expected: { "status": "OK", "database": { "connected": true } }
+
+  Step 5: Seed admin account
+    - Register normally, then manually set role: "admin" in MongoDB Atlas
+      Collection: users → find by email → Edit → role: "admin"
+
+  PRIORITY 2 — HARDEN FOR PRODUCTION (this week)
+  ─────────────────────────────────────────────────────────────────────────────
+
+  Step 6: Move image storage to Cloudinary
+    - Install: npm install cloudinary
+    - In lib/utils/uploadToCloudinary.js: upload buffer, return URL
+    - Replace toDataUri() calls in api/auth/profile.js and api/events/*.js
+    - Store URL string in MongoDB instead of base64 blob
+
+  Step 7: Add proper input validation
+    - Install: npm install zod (or joi)
+    - Create lib/validators/auth.js, lib/validators/events.js
+    - Add validation before DB calls in each api/ handler
+
+  Step 8: Add rate limiting
+    - Create Upstash Redis instance (free tier)
+    - Install: npm install @upstash/ratelimit @upstash/redis
+    - Create lib/rateLimit.js
+    - Apply to: /api/auth/login, /api/auth/register, /api/auth/forgot-password
+
+  Step 9: Fix CORS header scope
+    - In vercel.json, change Access-Control-Allow-Origin
+      from "*" to "https://your-app.vercel.app"
+
+  Step 10: Update Google OAuth redirect URIs
+    - Google Cloud Console → OAuth 2.0 Credentials
+    - Add: https://your-app.vercel.app
+    - Add: https://your-app.vercel.app/api/auth/google
+
+  PRIORITY 3 — PORTFOLIO QUALITY (within 2 weeks)
+  ─────────────────────────────────────────────────────────────────────────────
+
+  Step 11: Write integration tests
+    - npm install --save-dev jest supertest @jest/globals
+    - Test critical flows: register → verify → login → book → cancel
+
+  Step 12: Add GitHub Actions CI
+    - On PR: run tests, lint
+    - On merge to main: auto-deploy to Vercel
+
+  Step 13: Add admin seeding script
+    - Create scripts/seedAdmin.js
+    - Run locally: node scripts/seedAdmin.js
+    - Or as a one-time Vercel function (disable after run)
+
+  Step 14: Add Open Graph meta tags to client/index.html
+    - Makes link previews look professional when shared on LinkedIn
+
+  Step 15: Record a demo video
+    - Screen record the full user flow + admin flow
+    - Upload to YouTube / LinkedIn
+    - Link in README under "Live Demo"
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  8. RESUME / INTERVIEW EXPLANATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── FOR HR / NON-TECHNICAL RECRUITERS ──────────────────────────────────────────
+
+  "I built EventSphere — a web application that lets users browse and book
+  events online, and gives event organisers an admin dashboard to manage
+  listings and approve registrations. It's live on the internet, handles
+  user accounts with email verification, and sends automated booking
+  confirmation emails. I built everything myself — the user interface,
+  the server-side logic, and the database — and deployed it on Vercel."
+
+  Key points to highlight:
+  ✓ Full-stack (not just frontend)
+  ✓ Live and deployed
+  ✓ Real user flows (registration, email, booking)
+  ✓ Role-based access (user vs admin)
+
+── FOR TECHNICAL RECRUITERS / SCREENING CALLS ─────────────────────────────────
+
+  "EventSphere is a full-stack event booking platform built with React on
+  the frontend and Node.js serverless functions on the backend, connected
+  to MongoDB Atlas. I implemented JWT authentication with OTP email
+  verification, Google OAuth integration, a role-based access system for
+  users and admins, and a booking approval workflow. The architecture uses
+  Vercel serverless functions — each API route is a separate file in the
+  api/ directory — which means it auto-scales with zero infrastructure
+  management. I converted from a traditional Express server to this
+  serverless-first approach specifically for Vercel compatibility and
+  cost efficiency."
+
+  Be prepared to discuss:
+  ✓ Why serverless over traditional Express?
+  ✓ How JWT auth works (token signing, verification, expiry)
+  ✓ How MongoDB indexes improve booking query performance
+  ✓ How you prevent race conditions in seat booking (atomic update)
+
+── FOR TECHNICAL INTERVIEWS / DEVELOPER DISCUSSIONS ───────────────────────────
+
+  Architecture decision to lead with:
+  "I deliberately chose Vercel's serverless function model over a
+  traditional Express monolith. Each endpoint lives in its own file
+  under api/. Shared logic — models, auth helpers, email utilities —
+  lives in lib/ and is imported by whichever functions need it. This
+  gives me independent scaling per route, zero cold-start penalty for
+  low-traffic endpoints, and a deployment model that matches the repo
+  structure 1:1."
+
+  Interesting engineering problems solved:
+  1. Serverless DB connection caching
+     "In serverless environments, each invocation can spin up a new
+     process. I solved repeated reconnection overhead by caching the
+     Mongoose connection on the Node.js global object, which persists
+     across warm invocations within the same container."
+
+  2. Atomic seat booking
+     "To prevent overselling, seat deduction uses a MongoDB
+     findOneAndUpdate with a $gte filter on availableSeats. If two
+     requests arrive simultaneously, only the one that finds seats
+     available succeeds — the other gets a 409 ECONNFULL response."
+
+  3. Partial-filter unique index for bookings
+     "The Booking schema has a compound unique index on {user, event}
+     with a partialFilterExpression that only applies to pending and
+     approved statuses. This prevents double-booking while allowing
+     a user to re-book after cancelling."
+
+  4. Fire-and-forget email pattern
+     "Booking confirmation emails are sent asynchronously with .catch()
+     logging — they never reject the HTTP response. A failed email
+     should not cancel a booking."
+
+  Technical depth questions you should know:
+  Q: What is a Vercel serverless function?
+  A: A Node.js module that exports a default async function(req, res).
+     Vercel wraps it in an HTTP server and invokes it per request.
+     No app.listen(), no port binding, no process management.
+
+  Q: How does OTP verification prevent account spam?
+  A: Each OTP has a 10-minute TTL (stored as Date in MongoDB) and a
+     60-second resend cooldown tracked by otpLastSentAt. On registration,
+     if the OTP send fails, the user document is rolled back so the user
+     can retry without waiting for the cooldown.
+
+  Q: How do you handle auth in serverless without Express middleware?
+  A: I created withAuth() and withAdminAuth() wrapper functions in lib/auth.js.
+     Instead of app.use(protect), each handler calls:
+       return withAuth(req, res, async (req, res) => { ... })
+     The wrapper verifies the JWT, populates req.user, then delegates
+     to the inner handler. Same pattern as Express middleware, no Express.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SUMMARY SCORECARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ┌────────────────────────────────────┬──────────────┬──────────────────────┐
+  │ Category                           │ Score        │ Status               │
+  ├────────────────────────────────────┼──────────────┼──────────────────────┤
+  │ Core Features Implemented          │ 9/10         │ Complete             │
+  │ Authentication Depth               │ 9/10         │ Complete             │
+  │ API Design                         │ 8/10         │ Missing validation   │
+  │ Database Design                    │ 8/10         │ Image storage issue  │
+  │ Security                           │ 6/10         │ Needs rate limiting  │
+  │ Deployment Readiness               │ 7/10         │ Needs push + seed    │
+  │ Code Organisation                  │ 9/10         │ Clean architecture   │
+  │ Documentation                      │ 9/10         │ README complete      │
+  │ Test Coverage                      │ 0/10         │ Zero tests           │
+  │ Git Hygiene                        │ 6/10         │ Batch commits, sync  │
+  ├────────────────────────────────────┼──────────────┼──────────────────────┤
+  │ OVERALL PRODUCTION READINESS       │ 71/100       │ Strong MVP           │
+  └────────────────────────────────────┴──────────────┴──────────────────────┘
+
+  Immediate action required: Push to GitHub → Deploy on Vercel → Seed admin.
+  That moves this from "impressive local project" to "live production app"
+  — which is the single biggest upgrade for both portfolio and interviews.
+
+================================================================================
+  END OF REPORT
+================================================================================
