@@ -1,0 +1,12 @@
+{
+  "name": "eventsphere",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "start": "npm --prefix backend run start",
+    "build": "npm --prefix frontend run build",
+    "db:reset": "npm --prefix backend run db:reset"
+  }
+}
