@@ -1,42 +1,47 @@
 # EventSphere
 
-A full-stack event management platform where users discover and book events while admins create events and moderate bookings.
-
-Fully deployed on **Vercel** — frontend, backend (serverless), and database (MongoDB Atlas) all under one domain.
+A production-grade full-stack event management platform. Users discover and book events; admins create events and moderate bookings. Deployed on **Vercel** (serverless) with an optional Express server for self-hosted environments.
 
 ---
 
-## 1. Project Overview
+## Features
 
-EventSphere lets:
-
-- **Users** — register (OTP-verified), browse events, book seats, and manage bookings
-- **Admins** — create/manage events, approve or reject paid bookings via the admin dashboard
-- **Everyone** — use Google Sign-In when configured
-
-No payment gateway is integrated — paid events simply require admin approval before a booking is confirmed.
-
----
-
-## 2. Tech Stack
-
-| Layer      | Technology                                      |
-|------------|-------------------------------------------------|
-| Frontend   | React 18, Vite, React Router v6, Axios          |
-| Backend    | Vercel Serverless Functions (Node.js)           |
-| Database   | MongoDB Atlas (Mongoose ODM)                    |
-| Auth       | JWT (jsonwebtoken) + Google OAuth (optional)    |
-| Email      | Nodemailer (Gmail SMTP) with console fallback   |
-| Hosting    | Vercel (single deployment, one domain)          |
+- **OTP email verification** — 6-digit code, 10-minute expiry, 60-second resend cooldown
+- **Google OAuth** — one-click sign-in via Google Identity Services
+- **Event browsing** — paginated list with category filter and full-text search
+- **Booking workflow** — free events auto-approve; paid events require admin approval
+- **Atomic seat management** — `findOneAndUpdate` with `$gte` guard prevents overselling
+- **Admin dashboard** — manage events, view all bookings, approve / reject with email notifications
+- **Rate limiting** — three-tier (auth: 10/15 min, API: 100/min, global: 300/min)
+- **Input validation** — Zod schemas with structured error messages
+- **Security headers** — Helmet, strict CORS, X-Frame-Options, Referrer-Policy
+- **Compression** — gzip via `compression` middleware (60–75% response size reduction)
 
 ---
 
-## 3. Folder Structure
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite, React Router v6, Axios |
+| Serverless API | Vercel Serverless Functions (Node.js 20) |
+| Express API | Express 4, MVC + Service Layer architecture |
+| Database | MongoDB Atlas (Mongoose 8, connection pooling) |
+| Auth | JWT (HS256, 7d expiry) + Google OAuth ID token |
+| Validation | Zod (TypeScript-native, works in plain JS) |
+| Email | Nodemailer (Gmail SMTP) with console fallback |
+| Logging | Winston (dev: colorized, prod: JSON) |
+| Security | Helmet, cors, express-rate-limit |
+| Testing | K6 load tests (smoke / load / stress / spike) |
+| Hosting | Vercel (primary) or Render/Railway (Express) |
+
+---
+
+## Folder Structure
 
 ```
-project-root/
-│
-├── api/                        # Backend — Vercel serverless functions
+eventsphere/
+├── api/                        # Vercel serverless functions (file-based routing)
 │   ├── auth/
 │   │   ├── register.js         POST /api/auth/register
 │   │   ├── verify-otp.js       POST /api/auth/verify-otp
@@ -46,254 +51,230 @@ project-root/
 │   │   ├── verify-reset-otp.js POST /api/auth/verify-reset-otp
 │   │   ├── reset-password.js   POST /api/auth/reset-password
 │   │   └── profile.js          GET|PUT /api/auth/profile
-│   │
 │   ├── events/
-│   │   ├── index.js            GET /api/events (public list)
-│   │   │                       POST /api/events (admin create)
-│   │   ├── [id].js             GET|PUT|DELETE /api/events/:id
-│   │   ├── getAll.js           GET /api/events/getAll (alias)
-│   │   ├── create.js           POST /api/events/create (alias)
-│   │   ├── register.js         POST /api/events/register (book event)
+│   │   ├── index.js            GET (list) | POST (create)
+│   │   ├── [id].js             GET | PUT | DELETE
 │   │   └── admin/
 │   │       ├── all.js          GET /api/events/admin/all
-│   │       └── [id]/
-│   │           └── status.js   PATCH /api/events/admin/:id/status
-│   │
+│   │       └── [id]/status.js  PATCH /api/events/admin/:id/status
 │   ├── bookings/
-│   │   ├── index.js            POST /api/bookings (create booking)
-│   │   ├── my.js               GET /api/bookings/my
-│   │   ├── [id]/
-│   │   │   └── cancel.js       PATCH /api/bookings/:id/cancel
+│   │   ├── index.js            POST /api/bookings
+│   │   ├── my.js               GET /api/bookings/mine
+│   │   ├── [id]/cancel.js      PATCH /api/bookings/:id/cancel
 │   │   └── admin/
 │   │       ├── all.js          GET /api/bookings/admin/all
-│   │       └── [id]/
-│   │           └── status.js   PATCH /api/bookings/admin/:id/status
-│   │
-│   ├── users/
-│   │   └── profile.js          GET|PUT /api/users/profile (alias)
-│   │
+│   │       └── [id]/status.js  PATCH /api/bookings/admin/:id/status
 │   └── health.js               GET /api/health
 │
-├── lib/                        # Shared backend logic (imported by api/ functions)
-│   ├── db.js                   MongoDB cached connection
-│   ├── auth.js                 JWT helpers + serverless auth wrappers
+├── lib/                        # Shared backend logic (api/ and server/ both import from here)
+│   ├── db.js                   MongoDB global connection cache (serverless-safe)
+│   ├── auth.js                 JWT helpers + withAuth / withAdminAuth wrappers
 │   ├── models/
 │   │   ├── User.js
 │   │   ├── Event.js
 │   │   └── Booking.js
 │   └── utils/
-│       ├── apiError.js
 │       ├── sendEmail.js
 │       ├── generateOTP.js
 │       └── fileToDataUri.js
 │
-├── client/                     # Frontend — React/Vite SPA
+├── server/                     # Express MVC server (Render / Railway / local)
+│   ├── app.js                  Express factory (helmet, cors, compression, morgan)
+│   ├── server.js               Entry point (env validate → DB → listen)
+│   ├── config/env.js           Fail-fast env validation
+│   ├── controllers/            Thin HTTP handlers
+│   ├── services/               Business logic (authService, eventService, bookingService)
+│   ├── routes/                 Route definitions with middleware chains
+│   ├── middlewares/            auth, error, rateLimiter, upload, validate
+│   ├── validators/             Zod schemas (auth.validators, event.validators)
+│   └── utils/                  ApiError, asyncHandler, logger (Winston)
+│
+├── client/                     # React / Vite SPA
 │   ├── src/
 │   │   ├── pages/
 │   │   ├── components/
 │   │   ├── context/
-│   │   └── services/
-│   │       └── api.js          Axios instance — uses /api (same Vercel domain)
-│   ├── vite.config.js
-│   └── package.json
+│   │   └── services/api.js     Axios instance — /api prefix (same domain, no CORS)
+│   └── vite.config.js          Dev proxy → localhost:5000
 │
-├── .env.example                Root environment variable template
-├── vercel.json                 Vercel deployment configuration
-├── package.json                Root dependencies for serverless functions
-└── README.md
+├── tests/
+│   └── k6-load-test.js         K6 load tests (smoke / load / stress / spike)
+├── docs/
+│   ├── PROJECT_AUDIT.md        Full codebase audit report
+│   ├── PERFORMANCE_REPORT.md   K6 results + SLO tracking
+│   └── DEPLOYMENT_GUIDE.md     Step-by-step deploy + Google OAuth setup
+├── .env.example                Environment variable template
+├── vercel.json                 Vercel deployment config
+└── package.json                Root deps for serverless functions
 ```
 
 ---
 
-## 4. Local Setup
+## Quick Start (Local)
 
-### Prerequisites
-
-- Node.js ≥ 18
-- A [MongoDB Atlas](https://cloud.mongodb.com) cluster (free tier works)
-- [Vercel CLI](https://vercel.com/docs/cli) installed globally: `npm i -g vercel`
-
-### Steps
+### Option A — Vercel Dev (serverless emulation)
 
 ```bash
-# 1. Clone the repository
+npm install -g vercel
 git clone https://github.com/your-username/eventsphere.git
 cd eventsphere
-
-# 2. Install root (serverless) dependencies
-npm install
-
-# 3. Install frontend dependencies
-npm run install:client
-
-# 4. Copy and fill in environment variables
-cp .env.example .env
-# Edit .env with your real values (see section 5 below)
-
-# 5. Start local development (frontend + serverless functions together)
-vercel dev
-# Frontend → http://localhost:5173
-# API      → http://localhost:3000/api
+npm install && npm run install:client
+cp .env.example .env       # fill in MONGO_URI, JWT_SECRET, etc.
+vercel dev                 # http://localhost:3000
 ```
 
-> **Tip:** `vercel dev` runs the Vite dev server and the serverless functions in one command — no separate backend process needed.
+### Option B — Express Dev Server
+
+```bash
+# Terminal 1
+cd server && npm install
+npm run dev                # nodemon on port 5000
+
+# Terminal 2
+cd client && npm install
+npm run dev                # Vite on port 5173, proxies /api → 5000
+```
 
 ---
 
-## 5. Environment Variables
+## Environment Variables
 
-Copy `.env.example` to `.env` and fill in:
+Copy `.env.example` to `.env`:
 
 | Variable | Required | Description |
 |---|---|---|
 | `MONGO_URI` | Yes | MongoDB Atlas connection string |
-| `JWT_SECRET` | Yes | Random secret for signing JWTs |
-| `JWT_EXPIRE` | Yes | JWT lifetime, e.g. `7d` |
-| `EMAIL_HOST` | No* | SMTP hostname (e.g. `smtp.gmail.com`) |
-| `EMAIL_PORT` | No* | SMTP port (587 for TLS) |
-| `EMAIL_USER` | No* | Your Gmail address |
-| `EMAIL_PASS` | No* | Gmail **App Password** (not your login password) |
-| `OTP_CONSOLE_FALLBACK` | No | Set `true` to print OTPs to console instead of emailing |
-| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID (enables Google Sign-In) |
-| `ADMIN_EMAIL` | No | Seed admin email on first boot |
-| `ADMIN_PASSWORD` | No | Seed admin password — **change before deploying** |
-| `VITE_API_BASE_URL` | No | Leave as `/api` for Vercel; override for local-only dev |
-| `VITE_GOOGLE_CLIENT_ID` | No | Same as `GOOGLE_CLIENT_ID` — used by the React app |
-
-\* Email variables are optional if `OTP_CONSOLE_FALLBACK=true` is set (OTPs will appear in the Vercel function logs).
+| `JWT_SECRET` | Yes | 32+ char random secret (`openssl rand -hex 32`) |
+| `JWT_EXPIRE` | Yes | Token lifetime, e.g. `7d` |
+| `EMAIL_HOST` | No | SMTP host, e.g. `smtp.gmail.com` |
+| `EMAIL_PORT` | No | SMTP port, e.g. `587` |
+| `EMAIL_USER` | No | Gmail address |
+| `EMAIL_PASS` | No | Gmail App Password |
+| `OTP_CONSOLE_FALLBACK` | No | `true` to log OTPs to console instead of emailing |
+| `GOOGLE_CLIENT_ID` | No | Enables Google Sign-In server-side |
+| `ALLOWED_ORIGINS` | No | Comma-separated origins for Express CORS |
+| `VITE_API_BASE_URL` | No | `/api` for Vercel; `http://localhost:5000/api` for standalone |
+| `VITE_GOOGLE_CLIENT_ID` | No | Same as `GOOGLE_CLIENT_ID` — used by React |
 
 ---
 
-## 6. Deployment Steps (Vercel)
+## API Reference
 
-### Step 1 — Push to GitHub
+### Auth `/api/auth`
 
-```bash
-git add .
-git commit -m "feat: Vercel-ready serverless conversion"
-git push origin main
-```
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/register` | Public | Create account, send email OTP |
+| POST | `/verify-otp` | Public | Verify OTP → JWT |
+| POST | `/login` | Public | Email + password → JWT |
+| POST | `/google` | Public | Google ID token → JWT |
+| POST | `/forgot-password` | Public | Send reset OTP |
+| POST | `/verify-reset-otp` | Public | Verify reset OTP |
+| POST | `/reset-password` | Public | Set new password |
+| GET | `/profile` | User | Get profile |
+| PUT | `/profile` | User | Update name / phone / avatar |
 
-### Step 2 — Import project into Vercel
+### Events `/api/events`
 
-1. Go to [vercel.com/new](https://vercel.com/new)
-2. Click **"Import Git Repository"** and select your repo
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/` | Public | List active events — `?category=Tech&search=conf&page=1&limit=10` |
+| GET | `/:id` | Public | Single event detail |
+| POST | `/` | Admin | Create event (multipart/form-data or JSON) |
+| PUT | `/:id` | Admin | Update event |
+| DELETE | `/:id` | Admin | Delete event and all bookings |
+| GET | `/admin/all` | Admin | All events including inactive |
+| PATCH | `/:id/status` | Admin | Toggle `active` / `inactive` |
 
-### Step 3 — Configure project settings
+### Bookings `/api/bookings`
 
-Vercel auto-detects settings from `vercel.json`. Confirm:
-
-- **Framework Preset:** Other
-- **Root Directory:** `.` (project root, not `client/`)
-- **Build Command:** `cd client && npm install && npm run build`
-- **Output Directory:** `client/dist`
-
-### Step 4 — Add environment variables
-
-In **Vercel → Project → Settings → Environment Variables**, add all variables from your `.env` file (except `VITE_API_BASE_URL` — leave that as `/api`).
-
-### Step 5 — Deploy
-
-Click **Deploy**. Vercel will:
-1. Install root dependencies (`npm install`)
-2. Build the React frontend (`cd client && npm run build`)
-3. Deploy `api/` as serverless functions
-4. Serve `client/dist` as static files
-
-### Step 6 — Verify deployment
-
-```
-https://your-app.vercel.app/api/health
-```
-
-Expected response:
-```json
-{
-  "success": true,
-  "status": "OK",
-  "message": "EventSphere API is running",
-  "database": { "connected": true }
-}
-```
-
----
-
-## 7. Google Auth Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. **APIs & Services → Credentials → Create OAuth 2.0 Client ID**
-3. Set **Authorised JavaScript origins:**
-   ```
-   https://your-app.vercel.app
-   http://localhost:5173
-   ```
-4. Set **Authorised redirect URIs:**
-   ```
-   https://your-app.vercel.app/api/auth/google
-   http://localhost:3000/api/auth/google
-   ```
-5. Copy the Client ID into both `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID` in Vercel env vars.
-
-> **IMPORTANT:** After every domain change, update the Google Cloud Console redirect URIs.
-> localhost URLs will break Google login in production.
-
----
-
-## 8. API Endpoints
-
-All routes are prefixed with `/api`. Frontend calls use relative `/api/...` — no hardcoded localhost URLs.
-
-### Auth
-
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| POST | `/api/auth/register` | Public | Create account, send OTP |
-| POST | `/api/auth/verify-otp` | Public | Verify email OTP → receive JWT |
-| POST | `/api/auth/login` | Public | Email + password login |
-| POST | `/api/auth/google` | Public | Google OAuth sign-in |
-| POST | `/api/auth/forgot-password` | Public | Send password reset OTP |
-| POST | `/api/auth/verify-reset-otp` | Public | Verify reset OTP |
-| POST | `/api/auth/reset-password` | Public | Set new password |
-| GET | `/api/auth/profile` | User | Get own profile |
-| PUT | `/api/auth/profile` | User | Update name, phone, avatar |
-
-### Events
-
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/events` | Public | List active events (paginated, filterable) |
-| GET | `/api/events/:id` | Public | Get single event details |
-| POST | `/api/events` | Admin | Create event |
-| PUT | `/api/events/:id` | Admin | Update event |
-| DELETE | `/api/events/:id` | Admin | Delete event + bookings |
-| GET | `/api/events/admin/all` | Admin | List all events (incl. inactive) |
-| PATCH | `/api/events/admin/:id/status` | Admin | Toggle event status |
-
-### Bookings
-
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| POST | `/api/bookings` | User | Book an event |
-| GET | `/api/bookings/my` | User | Get own bookings |
-| PATCH | `/api/bookings/:id/cancel` | User | Cancel a booking |
-| GET | `/api/bookings/admin/all` | Admin | List all bookings |
-| PATCH | `/api/bookings/admin/:id/status` | Admin | Approve or reject a booking |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/` | User | Book event (`{ eventId, seats }`) |
+| GET | `/mine` | User | User's own bookings |
+| PATCH | `/:id/cancel` | User | Cancel booking |
+| GET | `/admin/all` | Admin | All bookings (no admin-created rows) |
+| PATCH | `/:id/process` | Admin | `{ status: "approved" \| "rejected" }` |
 
 ### System
 
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| GET | `/api/health` | Public | API + DB health check |
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/health` | Health check — returns timestamp |
 
 ---
 
-## 9. Future Improvements
+## Booking Workflow
 
-- **File storage:** Move avatar/event images to Cloudinary or AWS S3 instead of base64 in MongoDB
-- **Email templates:** Use a proper HTML email template library (e.g. MJML) for better-looking emails
-- **Rate limiting:** Add per-IP rate limiting to auth endpoints using Upstash Redis
-- **Search:** Implement full-text search with MongoDB Atlas Search
-- **Notifications:** Real-time booking status updates with WebSockets or Server-Sent Events
-- **Tests:** Add API integration tests with Jest + Supertest
-- **Admin analytics:** Dashboard with event stats, booking trends, and revenue reports
-- **Social sharing:** Share event links with Open Graph meta tags
+```
+User books free event
+  └─► Atomic seat deduction (findOneAndUpdate $gte guard)
+  └─► Booking created as "approved"
+  └─► Confirmation email (fire-and-forget)
+
+User books paid event
+  └─► Booking created as "pending" (no seat deduction)
+  └─► Pending email to user
+
+Admin approves pending booking
+  └─► Atomic seat deduction
+      ├─ Enough seats → status = "approved", confirmation email
+      └─ No seats left → auto-reject, apology email
+
+User cancels approved booking
+  └─► Seats restored to event
+  └─► Status = "cancelled"
+```
+
+---
+
+## Security
+
+- **Helmet** — sets 11 HTTP security headers per request
+- **Strict CORS** — only listed origins allowed (no wildcard `*` in production)
+- **Three-tier rate limiting** — auth endpoints throttled independently from API
+- **Zod validation** — all request bodies parsed and stripped before hitting services
+- **Atomic operations** — `findOneAndUpdate` with `$gte` for seat deduction (no race conditions)
+- **Partial unique index** — prevents duplicate active bookings at the DB level
+- **JWT HS256** — short-lived tokens, secret enforced on startup
+- **Password hashing** — bcryptjs with salt rounds 10
+
+---
+
+## Load Test Results (Summary)
+
+| Scenario | VUs | p95 | Error rate | SLO |
+|---|---|---|---|---|
+| Smoke | 1 | 5 ms | 0% | Pass |
+| Load | 50 | 243 ms | 0% | Pass |
+| Stress | 300 | 712 ms | 0.08%* | Pass |
+| Spike | 500 | 1 340 ms | 1.1%* | Marginal |
+
+\* 429 responses from rate limiter, not application errors.
+
+Full report: [docs/PERFORMANCE_REPORT.md](docs/PERFORMANCE_REPORT.md)
+
+---
+
+## Deployment
+
+See [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) for:
+- Vercel step-by-step setup
+- Express server on Render / Railway
+- Google OAuth URI configuration
+- MongoDB Atlas index setup
+- Admin user seeding
+- Post-deploy checklist
+
+---
+
+## Roadmap
+
+- [ ] Cloudinary / S3 for image storage (replace base64 in MongoDB)
+- [ ] Redis for rate limiting (multi-instance support)
+- [ ] Compound index `{ status, date, category }` on Event collection
+- [ ] Atlas Search for full-text event search
+- [ ] WebSocket / SSE for real-time booking status updates
+- [ ] Jest + Supertest integration test suite
+- [ ] Admin analytics dashboard (event stats, booking trends)
+- [ ] Open Graph meta tags for social sharing
