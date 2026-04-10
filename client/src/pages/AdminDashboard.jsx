@@ -41,8 +41,8 @@ export default function AdminDashboard() {
         api.get('/events/admin/all'),
         api.get('/bookings/admin/all'),
       ]);
-      setEvents(eventsRes.data);
-      setBookings(bookingsRes.data);
+      setEvents(eventsRes.data.events || []);
+      setBookings(bookingsRes.data.bookings || []);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to load dashboard'));
     } finally {
@@ -60,7 +60,7 @@ export default function AdminDashboard() {
     setActionKey(`event-status-${id}-${status}`);
     try {
       const res = await api.patch(`/events/admin/${id}/status`, { status });
-      toast.success(`Event ${res.data.status || 'updated'}`);
+      toast.success(`Event ${res.data.event?.status || 'updated'}`);
       await fetchDashboardData({ silent: true });
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to update event status'));
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
   const handleBookingAction = async (id, status) => {
     setActionKey(`booking-${id}-${status}`);
     try {
-      const res = await api.put(`/bookings/${id}/status`, { status });
+      const res = await api.patch(`/bookings/admin/${id}/status`, { status });
       toast.success(res.data.message || `Booking ${status}`);
       await fetchDashboardData({ silent: true });
     } catch (err) {

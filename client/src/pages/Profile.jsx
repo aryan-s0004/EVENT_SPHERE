@@ -34,7 +34,7 @@ export default function Profile() {
       const { data } = await api.put('/auth/profile', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setUser(data);
+      setUser(data.user);
       setPreview(null);
       setAvatar(null);
       toast.success('Profile updated');

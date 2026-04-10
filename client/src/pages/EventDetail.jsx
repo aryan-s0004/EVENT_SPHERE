@@ -27,7 +27,7 @@ export default function EventDetail() {
     if (!silent) setLoading(true);
     try {
       const response = await api.get(`/events/${id}`);
-      setEvent(response.data);
+      setEvent(response.data.event);
     } catch {
       navigate('/events');
     } finally {
