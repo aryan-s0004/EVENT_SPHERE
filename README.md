@@ -41,61 +41,28 @@ A production-grade full-stack event management platform. Users discover and book
 
 ```
 eventsphere/
-├── api/                        # Vercel serverless functions (file-based routing)
-│   ├── auth/
-│   │   ├── register.js         POST /api/auth/register
-│   │   ├── verify-otp.js       POST /api/auth/verify-otp
-│   │   ├── login.js            POST /api/auth/login
-│   │   ├── google.js           POST /api/auth/google
-│   │   ├── forgot-password.js  POST /api/auth/forgot-password
-│   │   ├── verify-reset-otp.js POST /api/auth/verify-reset-otp
-│   │   ├── reset-password.js   POST /api/auth/reset-password
-│   │   └── profile.js          GET|PUT /api/auth/profile
-│   ├── events/
-│   │   ├── index.js            GET (list) | POST (create)
-│   │   ├── [id].js             GET | PUT | DELETE
-│   │   └── admin/
-│   │       ├── all.js          GET /api/events/admin/all
-│   │       └── [id]/status.js  PATCH /api/events/admin/:id/status
-│   ├── bookings/
-│   │   ├── index.js            POST /api/bookings
-│   │   ├── my.js               GET /api/bookings/mine
-│   │   ├── [id]/cancel.js      PATCH /api/bookings/:id/cancel
-│   │   └── admin/
-│   │       ├── all.js          GET /api/bookings/admin/all
-│   │       └── [id]/status.js  PATCH /api/bookings/admin/:id/status
-│   └── health.js               GET /api/health
-│
-├── lib/                        # Shared backend logic (api/ and server/ both import from here)
-│   ├── db.js                   MongoDB global connection cache (serverless-safe)
-│   ├── auth.js                 JWT helpers + withAuth / withAdminAuth wrappers
-│   ├── models/
-│   │   ├── User.js
-│   │   ├── Event.js
-│   │   └── Booking.js
-│   └── utils/
-│       ├── sendEmail.js
-│       ├── generateOTP.js
-│       └── fileToDataUri.js
-│
-├── server/                     # Express MVC server (Render / Railway / local)
-│   ├── app.js                  Express factory (helmet, cors, compression, morgan)
-│   ├── server.js               Entry point (env validate → DB → listen)
-│   ├── config/env.js           Fail-fast env validation
-│   ├── controllers/            Thin HTTP handlers
-│   ├── services/               Business logic (authService, eventService, bookingService)
-│   ├── routes/                 Route definitions with middleware chains
-│   ├── middlewares/            auth, error, rateLimiter, upload, validate
-│   ├── validators/             Zod schemas (auth.validators, event.validators)
-│   └── utils/                  ApiError, asyncHandler, logger (Winston)
-│
-├── client/                     # React / Vite SPA
+├── frontend/                   # React / Vite SPA
 │   ├── src/
 │   │   ├── pages/
 │   │   ├── components/
-│   │   ├── context/
-│   │   └── services/api.js     Axios instance — /api prefix (same domain, no CORS)
-│   └── vite.config.js          Dev proxy → localhost:5000
+│   │   ├── services/api.js     # Axios instance - centralized API handling
+│   │   └── ...
+│   └── vite.config.js          # Port 3000, proxies /api -> 5000
+│
+├── backend/                    # Express MVC server
+│   ├── api/                    # Route definitions (auth-routes.js, etc.)
+│   ├── controllers/            # HTTP handlers
+│   ├── services/               # Business logic
+│   ├── models/                 # Mongoose schemas
+│   ├── middleware/             # auth, error, upload, etc.
+│   ├── db/                     # DB connection & env validation
+│   ├── utils/                  # api-error, send-email, etc.
+│   ├── app.js                  # Express factory
+│   └── server.js               # Entry point (port 5000)
+│
+├── vercel.json                 # Vercel deployment config
+├── .env.example                # Environment variable template
+└── package.json                # Root automation scripts
 │
 ├── tests/
 │   └── k6-load-test.js         K6 load tests (smoke / load / stress / spike)

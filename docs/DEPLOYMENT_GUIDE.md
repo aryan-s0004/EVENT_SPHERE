@@ -2,14 +2,14 @@
 
 ## Deployment Targets
 
-| Path | Platform | Entry point |
-|---|---|---|
-| Frontend + Serverless API | **Vercel** | `api/**/*.js` + `client/dist` |
-| Full Express backend | **Render / Railway** | `server/server.js` |
+The EventSphere application is built for a **Unified Vercel Deployment**. This means both the React frontend and the Express API are hosted on Vercel under a single domain.
 
-Both share the same `lib/` layer (models, db, utils) — zero code duplication.
+| Component | Platform | Entry point |
+|---|---|---|
+| Unified Full-Stack | **Vercel** | `api/index.js` (Backend) + `frontend/dist` (Frontend) |
 
 ---
+
 
 ## 1 — Vercel Deployment (Recommended)
 

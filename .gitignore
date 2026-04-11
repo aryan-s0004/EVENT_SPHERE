@@ -1,5 +1,6 @@
 node_modules/
-backend/
+# backend/ (Removed ignore so Vercel can see the code)
+
 
 frontend/node_modules/
 client/node_modules/
