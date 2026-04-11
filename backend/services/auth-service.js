@@ -13,7 +13,6 @@
 'use strict';
 
 const jwt            = require('jsonwebtoken');
-const { OAuth2Client } = require('google-auth-library');
 const User           = require('../models/user');
 const sendEmail      = require('../utils/send-email');
 const generateOTP    = require('../utils/generate-otp');
@@ -23,9 +22,6 @@ const ApiError       = require('../utils/api-error');
 const OTP_EXPIRY_MS          = 10 * 60 * 1000; // 10 minutes
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;       // 1 minute
 
-const googleClient = process.env.GOOGLE_CLIENT_ID
-  ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
-  : null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -65,9 +61,6 @@ const register = async ({ name, email, password }) => {
     throw ApiError.conflict('An account with this email already exists', 'EMAIL_IN_USE');
   }
 
-  if (user?.googleId && !user.password) {
-    throw ApiError.conflict('This email is registered with Google login', 'GOOGLE_ACCOUNT_EXISTS');
-  }
 
   const isNew          = !user;
   const previousOtpState = user
@@ -177,40 +170,6 @@ const login = async ({ email, password }) => {
   return { token: signToken(user), user: toPublicUser(user) };
 };
 
-/**
- * googleAuth({ token })
- * Verifies a Google ID token and creates/updates the user record.
- */
-const googleAuth = async ({ token }) => {
-  if (!googleClient) {
-    throw new ApiError(503, 'GOOGLE_NOT_CONFIGURED', 'Google OAuth is not configured on this server');
-  }
-
-  const ticket = await googleClient.verifyIdToken({
-    idToken:  token,
-    audience: process.env.GOOGLE_CLIENT_ID,
-  });
-
-  const { sub: googleId, email, name, picture } = ticket.getPayload();
-
-  let user = await User.findOne({ $or: [{ googleId }, { email }] });
-
-  if (!user) {
-    user = await User.create({ name, email, googleId, avatar: picture || '', isVerified: true });
-  } else {
-    if (!user.googleId) {
-      if (!user.isVerified) {
-        throw new ApiError(403, 'VERIFY_EMAIL_FIRST', 'Verify your email before linking Google login');
-      }
-      user.googleId = googleId;
-    }
-    user.avatar     = picture || user.avatar;
-    user.isVerified = true;
-    await user.save();
-  }
-
-  return { token: signToken(user), user: toPublicUser(user) };
-};
 
 /**
  * forgotPassword({ email })
@@ -338,7 +297,6 @@ module.exports = {
   register,
   verifyOTP,
   login,
-  googleAuth,
   forgotPassword,
   verifyResetOTP,
   resetPassword,

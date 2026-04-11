@@ -10,7 +10,6 @@ const REQUIRED = ['MONGO_URI', 'JWT_SECRET', 'JWT_EXPIRE'];
 
 const OPTIONAL_WARN = [
   'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASS',
-  'GOOGLE_CLIENT_ID',
 ];
 
 const validateEnv = () => {

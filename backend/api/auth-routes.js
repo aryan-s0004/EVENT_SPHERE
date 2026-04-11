@@ -2,7 +2,7 @@
  * server/routes/auth.routes.js
  * All authentication endpoints.
  *
- * Public:   POST /register, /verify-otp, /login, /google, /forgot-password,
+ * Public:   POST /register, /verify-otp, /login, /forgot-password,
  *                /verify-reset-otp, /reset-password
  * Protected: GET /profile, PUT /profile
  */
@@ -18,7 +18,6 @@ const {
   registerSchema,
   verifyOtpSchema,
   loginSchema,
-  googleSchema,
   forgotPasswordSchema,
   verifyResetOtpSchema,
   resetPasswordSchema,
@@ -30,7 +29,6 @@ const router = Router();
 router.post('/register',          authLimiter, validate(registerSchema),       authCtrl.register);
 router.post('/verify-otp',        authLimiter, validate(verifyOtpSchema),      authCtrl.verifyOTP);
 router.post('/login',             authLimiter, validate(loginSchema),          authCtrl.login);
-router.post('/google',            authLimiter, validate(googleSchema),         authCtrl.googleAuth);
 router.post('/forgot-password',   authLimiter, validate(forgotPasswordSchema), authCtrl.forgotPassword);
 router.post('/verify-reset-otp',  authLimiter, validate(verifyResetOtpSchema), authCtrl.verifyResetOTP);
 router.post('/reset-password',    authLimiter, validate(resetPasswordSchema),  authCtrl.resetPassword);

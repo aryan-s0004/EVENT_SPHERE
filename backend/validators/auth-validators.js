@@ -30,9 +30,6 @@ const verifyOtpSchema = z.object({
 
 const loginSchema = z.object({ email, password: z.string().min(1, 'Password is required') });
 
-const googleSchema = z.object({
-  token: z.string().trim().min(1, 'Google token is required'),
-});
 
 const forgotPasswordSchema = z.object({ email });
 
@@ -52,7 +49,6 @@ module.exports = {
   registerSchema,
   verifyOtpSchema,
   loginSchema,
-  googleSchema,
   forgotPasswordSchema,
   verifyResetOtpSchema,
   resetPasswordSchema,

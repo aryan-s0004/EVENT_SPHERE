@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
@@ -16,7 +15,6 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 
 export default function App() {
-  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 
   const appShell = (
     <ThemeProvider>
@@ -51,13 +49,5 @@ export default function App() {
     </ThemeProvider>
   );
 
-  if (!googleClientId) {
-    return appShell;
-  }
-
-  return (
-    <GoogleOAuthProvider clientId={googleClientId}>
-      {appShell}
-    </GoogleOAuthProvider>
-  );
+  return appShell;
 }

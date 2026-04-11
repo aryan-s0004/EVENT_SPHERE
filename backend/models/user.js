@@ -1,6 +1,5 @@
-// lib/models/User.js
+// backend/models/user.js
 // Mongoose schema for EventSphere users.
-// Supports both email/password and Google OAuth sign-in flows.
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -9,10 +8,9 @@ const userSchema = new mongoose.Schema(
   {
     name:       { type: String, required: true, trim: true },
     email:      { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password:   { type: String },                              // undefined for Google-only accounts
+    password:   { type: String },
     role:       { type: String, enum: ['user', 'admin'], default: 'user' },
     isVerified: { type: Boolean, default: false },
-    googleId:   { type: String, unique: true, sparse: true }, // sparse = only indexed when set
     avatar:     { type: String, default: '' },
     phone:      { type: String, default: '' },
 
@@ -30,7 +28,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Hash password before save (only when modified, skip Google-only users).
+// Hash password before save (only when modified).
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 10);
