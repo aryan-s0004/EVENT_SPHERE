@@ -1,7 +1,7 @@
 /**
  * api/index.js
  * Vercel Serverless Function entry point.
- * Build Trigger: 2026-04-12 04:05 (Careful Unified Migration)
+ * Build Trigger: 2026-04-12 04:30 (Hard Sync & Debug Hook)
  */
 'use strict';
 

@@ -108,6 +108,15 @@ export default function Login() {
         <p style={styles.footer}>
           Don't have an account? <Link to="/register" style={styles.link}>Create one</Link>
         </p>
+
+        {new URLSearchParams(window.location.search).get('debug') === 'true' && (
+          <div style={styles.debug}>
+            <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.7rem' }}>DEBUG INFO</p>
+            <p style={{ margin: 0, fontSize: '0.65rem', wordBreak: 'break-all' }}>
+              ID: {googleClientId || 'NOT_SET'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
 
