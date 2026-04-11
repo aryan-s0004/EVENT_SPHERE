@@ -16,6 +16,7 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState('events');
   const [events, setEvents] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
@@ -37,12 +38,14 @@ export default function AdminDashboard() {
   const fetchDashboardData = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
     try {
-      const [eventsRes, bookingsRes] = await Promise.all([
+      const [eventsRes, bookingsRes, analyticsRes] = await Promise.all([
         api.get('/events/admin/all'),
         api.get('/bookings/admin/all'),
+        api.get('/analytics').catch(() => null),  // non-blocking — analytics is bonus data
       ]);
       setEvents(eventsRes.data.events || []);
       setBookings(bookingsRes.data.bookings || []);
+      if (analyticsRes?.data?.success) setAnalytics(analyticsRes.data);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Unable to load dashboard'));
     } finally {
@@ -155,10 +158,12 @@ export default function AdminDashboard() {
   };
 
   const stats = [
-    { label: 'Total Events', value: events.length, color: 'var(--accent)' },
-    { label: 'Active Events', value: events.filter((e) => e.status === 'active').length, color: 'var(--success-fg)' },
-    { label: 'Total Bookings', value: bookings.length, color: 'var(--primary)' },
-    { label: 'Pending Approval', value: bookings.filter((b) => b.status === 'pending').length, color: 'var(--warning-fg)' },
+    { label: 'Total Events',      value: events.length,                                               color: 'var(--accent)'   },
+    { label: 'Active Events',     value: events.filter((e) => e.status === 'active').length,          color: 'var(--success-fg)' },
+    { label: 'Total Users',       value: analytics?.users?.total ?? '—',                              color: 'var(--primary)'  },
+    { label: 'Total Bookings',    value: bookings.length,                                             color: '#8b5cf6'         },
+    { label: 'Pending Approval',  value: bookings.filter((b) => b.status === 'pending').length,       color: 'var(--warning-fg)' },
+    { label: 'Revenue Confirmed', value: analytics ? `Rs ${(analytics.bookings?.revenue || 0).toLocaleString('en-IN')}` : '—', color: '#10b981' },
   ];
 
   return (
@@ -183,6 +188,63 @@ export default function AdminDashboard() {
               <div style={styles.statLabel}>{label}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Analytics: booking status breakdown + top events ─────────────────── */}
+      {!loading && analytics && (
+        <div style={styles.analyticsRow}>
+          {/* Booking status breakdown */}
+          <div style={styles.analyticsCard}>
+            <h3 style={styles.analyticsTitle}>Booking Status</h3>
+            <div style={styles.statusGrid}>
+              {[
+                { key: 'approved',  label: 'Confirmed',  color: 'var(--success-fg)', bg: 'var(--success-bg)'  },
+                { key: 'pending',   label: 'Pending',    color: 'var(--warning-fg)', bg: 'var(--warning-bg)'  },
+                { key: 'rejected',  label: 'Rejected',   color: 'var(--error-fg)',   bg: 'var(--error-bg)'    },
+                { key: 'cancelled', label: 'Cancelled',  color: 'var(--neutral-fg)', bg: 'var(--neutral-bg)'  },
+              ].map(({ key, label, color, bg }) => (
+                <div key={key} style={{ ...styles.statusChipLarge, background: bg, color }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '800', lineHeight: 1 }}>
+                    {analytics.bookings.byStatus[key] ?? 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', marginTop: '4px' }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={styles.userRow}>
+              <span style={styles.userStat}>Registered users: <strong>{analytics.users.total}</strong></span>
+              <span style={styles.userStat}>New this week: <strong style={{ color: 'var(--success-fg)' }}>+{analytics.users.newThisWeek}</strong></span>
+              <span style={styles.userStat}>Verified: <strong>{analytics.users.verified}</strong></span>
+            </div>
+          </div>
+
+          {/* Top events by bookings */}
+          {analytics.topEvents?.length > 0 && (
+            <div style={styles.analyticsCard}>
+              <h3 style={styles.analyticsTitle}>Top Events by Bookings</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {analytics.topEvents.map((ev, i) => {
+                  const pct = ev.totalSeats > 0 ? Math.min(100, Math.round((ev.seatsBooked / ev.totalSeats) * 100)) : 0;
+                  return (
+                    <div key={ev._id} style={styles.topEventRow}>
+                      <span style={styles.topEventRank}>{i + 1}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={styles.topEventTitle}>{ev.title || 'Untitled'}</div>
+                        <div style={styles.topEventBar}>
+                          <div style={{ ...styles.topEventFill, width: `${pct}%` }} />
+                        </div>
+                        <div style={styles.topEventMeta}>
+                          {ev.bookingCount} booking{ev.bookingCount !== 1 ? 's' : ''} · {pct}% seats filled
+                          {ev.price > 0 ? ` · Rs ${ev.price}` : ' · Free'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -615,5 +677,95 @@ const styles = {
     cursor: 'pointer',
     fontSize: '0.78rem',
     fontWeight: '700',
+  },
+
+  // ── Analytics section ──────────────────────────────────────────────────────
+  analyticsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: '16px',
+    marginBottom: '28px',
+  },
+  analyticsCard: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '14px',
+    padding: '20px',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  analyticsTitle: {
+    fontSize: '0.9rem',
+    fontWeight: '700',
+    color: 'var(--text)',
+    marginBottom: '16px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  statusGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '8px',
+    marginBottom: '16px',
+  },
+  statusChipLarge: {
+    borderRadius: '10px',
+    padding: '10px 6px',
+    textAlign: 'center',
+  },
+  userRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px',
+    paddingTop: '12px',
+    borderTop: '1px solid var(--border)',
+  },
+  userStat: {
+    fontSize: '0.8rem',
+    color: 'var(--text-muted)',
+  },
+  topEventRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+  },
+  topEventRank: {
+    width: '22px',
+    height: '22px',
+    borderRadius: '50%',
+    background: 'var(--primary)',
+    color: 'var(--primary-fg)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '0.72rem',
+    fontWeight: '800',
+    flexShrink: 0,
+    marginTop: '2px',
+  },
+  topEventTitle: {
+    fontSize: '0.88rem',
+    fontWeight: '600',
+    color: 'var(--text)',
+    marginBottom: '5px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  topEventBar: {
+    height: '6px',
+    borderRadius: '999px',
+    background: 'var(--border)',
+    overflow: 'hidden',
+    marginBottom: '4px',
+  },
+  topEventFill: {
+    height: '100%',
+    borderRadius: '999px',
+    background: 'var(--primary)',
+    transition: 'width 0.4s ease',
+  },
+  topEventMeta: {
+    fontSize: '0.75rem',
+    color: 'var(--text-muted)',
   },
 };

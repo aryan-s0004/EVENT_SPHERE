@@ -151,7 +151,25 @@ async function handleGoogle(req, res) {
 
     return res.json({ success: true, message: 'Google login successful', token: signToken(user), user: toPublicUser(user) });
   } catch (err) {
-    if (err.message?.toLowerCase().includes('token')) return res.status(401).json({ success: false, code: 'GOOGLE_TOKEN_INVALID', message: 'Google token is invalid or expired' });
+    // google-auth-library throws various error shapes — catch all of them here
+    // rather than letting them bubble up to the generic 500 handler.
+    const msg = err.message || '';
+    const isTokenError =
+      msg.toLowerCase().includes('token') ||
+      msg.toLowerCase().includes('aud') ||
+      msg.toLowerCase().includes('audience') ||
+      msg.toLowerCase().includes('expired') ||
+      msg.toLowerCase().includes('invalid') ||
+      msg.toLowerCase().includes('jwt') ||
+      err.name === 'TokenError';
+
+    if (isTokenError) {
+      return res.status(401).json({
+        success: false,
+        code:    'GOOGLE_TOKEN_INVALID',
+        message: 'Google sign-in failed — please try again. If the problem persists, refresh the page.',
+      });
+    }
     throw err;
   }
 }

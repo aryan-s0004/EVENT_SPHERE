@@ -29,6 +29,10 @@ export default function Login() {
   };
 
   const handleGoogle = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      toast.error('Google did not return a valid credential. Please try again.');
+      return;
+    }
     setGoogleSubmitting(true);
     try {
       const { data } = await api.post('/auth/google', { token: credentialResponse.credential });
@@ -36,10 +40,21 @@ export default function Login() {
       toast.success(data.message || 'Welcome!');
       navigate(data.user.role === 'admin' ? '/admin' : '/');
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Google login failed'));
+      const code = err?.response?.data?.code;
+      if (code === 'GOOGLE_NOT_CONFIGURED') {
+        toast.error('Google sign-in is not enabled on this deployment.');
+      } else if (code === 'VERIFY_EMAIL_FIRST') {
+        toast.error('This email has an account — please verify it before using Google sign-in.');
+      } else {
+        toast.error(getErrorMessage(err, 'Google sign-in failed. Please try again.'));
+      }
     } finally {
       setGoogleSubmitting(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    toast.error('Google sign-in was blocked or cancelled. Check that pop-ups are allowed for this site.');
   };
 
   return (
@@ -84,7 +99,7 @@ export default function Login() {
             <div style={styles.divider}><span>or continue with</span></div>
 
             <div style={{ display: 'flex', justifyContent: 'center', opacity: googleSubmitting ? 0.7 : 1, pointerEvents: googleSubmitting ? 'none' : 'auto' }}>
-              <GoogleLogin onSuccess={handleGoogle} onError={() => toast.error('Google login failed')} />
+              <GoogleLogin onSuccess={handleGoogle} onError={handleGoogleError} />
             </div>
             {googleSubmitting && <p style={styles.helper}>Signing in with Google...</p>}
           </>
