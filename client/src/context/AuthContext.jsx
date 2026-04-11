@@ -12,7 +12,10 @@ export const AuthProvider = ({ children }) => {
     const token = getAuthToken();
     if (token) {
       api.get('/auth/profile')
-        .then(r => setUser(r.data.user))
+        .then((r) => {
+          const d = r.data || {};
+          setUser(d.user ?? d);
+        })
         .catch(() => clearAuthToken())
         .finally(() => setLoading(false));
     } else {

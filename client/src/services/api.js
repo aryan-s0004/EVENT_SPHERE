@@ -3,12 +3,14 @@ import { clearAuthToken, getAuthToken } from './authStorage';
 
 const trimTrailingSlash = (value) => value.replace(/\/+$/, '');
 
-// update URLs before deployment via Vercel env vars
-const rawApiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+// Support both VITE_API_BASE_URL (local) and VITE_API_URL (Vercel project env)
+const rawApiBaseUrl =
+  (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').trim();
 const normalizedApiBaseUrl = rawApiBaseUrl ? trimTrailingSlash(rawApiBaseUrl) : '/api';
 const assetBaseUrl = normalizedApiBaseUrl.endsWith('/api')
   ? normalizedApiBaseUrl.slice(0, -4)
   : normalizedApiBaseUrl;
+
 
 export const resolveAssetUrl = (value) => {
   if (!value) {

@@ -37,6 +37,6 @@ router.get   ('/admin/all',         ...admin,                                   
 router.post  ('/',                  ...admin, singleImage, validate(createEventSchema),     eventCtrl.createEvent);
 router.put   ('/:id',               ...admin, singleImage, validate(updateEventSchema),     eventCtrl.updateEvent);
 router.delete('/:id',               ...admin,                                               eventCtrl.deleteEvent);
-router.patch ('/:id/status',        ...admin, validate(updateEventStatusSchema),            eventCtrl.updateEventStatus);
+router.patch ('/admin/:id/status',  ...admin, validate(updateEventStatusSchema),            eventCtrl.updateEventStatus);
 
 module.exports = router;

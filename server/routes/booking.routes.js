@@ -30,6 +30,6 @@ router.patch ('/:id/cancel',  apiLimiter, protect, bookingCtrl.cancelBooking);
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 router.get   ('/admin/all',       ...admin, bookingCtrl.getAllBookings);
-router.patch ('/:id/process',     ...admin, validate(processBookingSchema), bookingCtrl.processBooking);
+router.patch ('/admin/:id/status', ...admin, validate(processBookingSchema), bookingCtrl.processBooking);
 
 module.exports = router;

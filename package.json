@@ -9,7 +9,8 @@
     "install:client": "cd client && npm install",
     "install:all": "npm install && cd client && npm install",
     "dev:client": "npm --prefix client run dev",
-    "db:reset": "npm --prefix backend run db:reset"
+    "db:reset": "npm --prefix backend run db:reset",
+    "seed:backend": "npm --prefix backend run seed"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

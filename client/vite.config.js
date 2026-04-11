@@ -1,24 +1,25 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const proxyTarget = (env.API_PROXY_TARGET || 'http://localhost:5000').replace(/\/+$/, '');
 
-  server: {
-    port: 5173,
+  return {
+    plugins: [react()],
 
-    // During local development, proxy /api requests to the Vercel dev server.
-    // In production on Vercel, /api is handled by serverless functions on the
-    // same domain — no proxy needed and no CORS issues arise.
-    proxy: {
-      '/api': {
-        // Option A: `vercel dev` from project root → use port 3000
-        // Option B: old Express backend → use port 5000
-        // Change the port to match whichever backend you are running locally.
-        target: 'http://localhost:3000',
-        changeOrigin: true,
+    server: {
+      port: 5173,
+
+      // Proxy /api to Express (backend/) during local dev when VITE_API_BASE_URL=/api.
+      // Override with API_PROXY_TARGET in client/.env (e.g. http://localhost:3000 for vercel dev).
+      proxy: {
+        '/api': {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
       },
     },
-  },
+  };
 });
