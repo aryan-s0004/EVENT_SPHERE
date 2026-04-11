@@ -1,7 +1,7 @@
 /**
  * api/index.js
  * Vercel Serverless Function entry point.
- * This file boots the Express app and handles the serverless lifecycle.
+ * Build Trigger: 2026-04-12 04:05 (Careful Unified Migration)
  */
 'use strict';
 
