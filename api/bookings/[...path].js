@@ -185,6 +185,43 @@ module.exports = async function handler(req, res) {
     const fromQuery     = Array.isArray(req.query.path) ? req.query.path : [req.query.path].filter(Boolean);
     const segments      = fromUrl.length ? fromUrl : fromQuery;
 
+    // /api/bookings  POST — create booking (previously in index.js)
+    if (segments.length === 0) {
+      if (req.method !== 'POST') return res.status(405).json({ success: false, message: 'Method not allowed. Use POST.' });
+      return withAuth(req, res, async (req, res) => {
+        const { eventId } = req.body || {};
+        const seats = Math.max(1, Number(req.body?.seats || 1));
+        if (!eventId) return res.status(400).json({ success: false, code: 'MISSING_FIELDS', message: 'eventId is required' });
+        if (req.user.role === 'admin') return res.status(403).json({ success: false, code: 'ADMIN_BOOKING_DISABLED', message: 'Admins cannot book events' });
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ success: false, code: 'EVENT_NOT_FOUND', message: 'Event not found' });
+        if (event.status !== 'active') return res.status(400).json({ success: false, code: 'EVENT_UNAVAILABLE', message: 'This event is not available for booking' });
+        if (event.availableSeats < seats) return res.status(409).json({ success: false, code: 'EVENT_FULL', message: 'Not enough seats available' });
+        const existingBooking = await Booking.findOne({ user: req.user._id, event: eventId, status: { $in: ['pending', 'approved'] } });
+        if (existingBooking) return res.status(409).json({ success: false, code: 'BOOKING_EXISTS', message: 'You already have an active booking for this event' });
+        const requiresApproval = Number(event.price) > 0;
+        const totalPrice = event.price * seats;
+        const fmtDate = (d) => { try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return String(d); } };
+        const eventDateStr = `${fmtDate(event.date)} at ${event.time}`;
+        if (requiresApproval) {
+          const booking = await Booking.create({ user: req.user._id, event: eventId, seats, status: 'pending', totalPrice });
+          fireEmail({ to: req.user.email, subject: `Booking Request Submitted – ${event.title}`, html: `<h2>Booking Request Received</h2><p>Hi <b>${req.user.name}</b>, your booking for <b>${event.title}</b> (${seats} seat(s)) on ${eventDateStr} is pending approval. Total: Rs ${totalPrice}</p>`, logLabel: 'booking-pending' });
+          return res.status(201).json({ success: true, message: 'Booking request submitted for approval', booking });
+        }
+        const updatedEvent = await Event.findOneAndUpdate({ _id: eventId, status: 'active', availableSeats: { $gte: seats } }, { $inc: { availableSeats: -seats } }, { new: true });
+        if (!updatedEvent) return res.status(409).json({ success: false, code: 'EVENT_FULL', message: 'Not enough seats available' });
+        try {
+          const booking = await Booking.create({ user: req.user._id, event: eventId, seats, status: 'approved', totalPrice, processedAt: new Date() });
+          fireEmail({ to: req.user.email, subject: `Booking Confirmed – ${event.title}`, html: `<h2>Booking Confirmed!</h2><p>Hi <b>${req.user.name}</b>, your booking for <b>${event.title}</b> on ${eventDateStr} is confirmed. Free event — no payment required!</p>`, logLabel: 'booking-confirmed' });
+          return res.status(201).json({ success: true, message: 'Booking confirmed', booking, event: { id: updatedEvent._id, availableSeats: updatedEvent.availableSeats } });
+        } catch (err) {
+          await Event.findByIdAndUpdate(eventId, { $inc: { availableSeats: seats } });
+          if (err.code === 11000) return res.status(409).json({ success: false, code: 'BOOKING_EXISTS', message: 'You already have an active booking for this event' });
+          throw err;
+        }
+      });
+    }
+
     // /api/bookings/mine
     if (segments[0] === 'mine' && segments.length === 1) {
       return await handleMine(req, res);

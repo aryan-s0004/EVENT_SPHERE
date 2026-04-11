@@ -156,6 +156,41 @@ module.exports = async function handler(req, res) {
     const fromQuery    = Array.isArray(req.query.path) ? req.query.path : [req.query.path].filter(Boolean);
     const segments     = fromUrl.length ? fromUrl : fromQuery;
 
+    // /api/events  (GET list, POST create) — previously in index.js
+    if (segments.length === 0) {
+      if (req.method === 'GET') {
+        const category = req.query.category?.trim();
+        const search   = req.query.search?.trim();
+        const page     = Math.max(1, Number(req.query.page  || 1));
+        const limit    = Math.min(50, Math.max(1, Number(req.query.limit || 10)));
+        const filter   = { status: 'active' };
+        if (category) filter.category = category;
+        if (search) filter.$or = [{ title: { $regex: search, $options: 'i' } }, { location: { $regex: search, $options: 'i' } }];
+        const [events, total] = await Promise.all([
+          Event.find(filter).populate('createdBy', 'name').sort({ date: 1 }).skip((page - 1) * limit).limit(limit),
+          Event.countDocuments(filter),
+        ]);
+        return res.json({ success: true, events, total, page, pages: Math.ceil(total / limit) || 1 });
+      }
+      if (req.method === 'POST') {
+        return withAdminAuth(req, res, async (req, res) => {
+          try { await runMulter(req, res); } catch (e) { return res.status(400).json({ success: false, message: e.message }); }
+          const { title, description, date, time, location, category, price, totalSeats, tags, imageUrl } = req.body || {};
+          if (!title || !description || !date || !time || !location || !category || !totalSeats) {
+            return res.status(400).json({ success: false, code: 'MISSING_FIELDS', message: 'title, description, date, time, location, category, and totalSeats are required' });
+          }
+          const parsedPrice = Number(price) || 0;
+          const parsedSeats = Number(totalSeats);
+          const eventData = { title, description, date, time, location, category, price: parsedPrice, totalSeats: parsedSeats, availableSeats: parsedSeats, approvalRequired: parsedPrice > 0, tags: parseTags(tags), status: 'active', createdBy: req.user._id };
+          if (req.file) eventData.image = toDataUri(req.file);
+          else if (imageUrl) eventData.image = imageUrl;
+          const event = await Event.create(eventData);
+          return res.status(201).json({ success: true, event });
+        });
+      }
+      return res.status(405).json({ success: false, message: 'Method not allowed. Use GET or POST.' });
+    }
+
     // /api/events/admin/all
     if (segments[0] === 'admin' && segments[1] === 'all' && segments.length === 2) {
       return await handleAdminAll(req, res);
