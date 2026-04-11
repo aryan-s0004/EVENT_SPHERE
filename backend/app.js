@@ -18,7 +18,7 @@ const morgan      = require('morgan');
 const compression = require('compression');
 
 const { globalLimiter }  = require('./middleware/rate-limiter-middleware');
-const errorHandler       = require('./middleware/error-middleware');
+const { errorHandler }   = require('./middleware/error-middleware');
 const logger             = require('./utils/logger');
 
 const authRoutes    = require('./api/auth-routes');
