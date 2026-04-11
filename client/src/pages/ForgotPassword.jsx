@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api, { getErrorMessage, getErrorCode } from '../services/api';
 
@@ -98,43 +98,143 @@ export default function ForgotPassword() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Forgot Password</h2>
-        {step === 1 ? (
-          <form onSubmit={handleForgot}>
-            <input style={styles.input} type="email" placeholder="Your email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            <button style={styles.btn} type="submit" disabled={submitting}>{submitting ? 'Sending OTP...' : 'Send OTP'}</button>
-          </form>
-        ) : step === 2 ? (
-          <form onSubmit={handleVerifyOtp}>
-            <p style={styles.hint}>OTP sent to <b>{email}</b></p>
-            <input style={styles.input} placeholder="Enter OTP" required maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} />
-            <button style={styles.btn} type="submit" disabled={verifyingOtp}>{verifyingOtp ? 'Verifying...' : 'Verify OTP'}</button>
-            <button type="button" style={styles.secondaryBtn} onClick={handleResend} disabled={submitting || resendCooldown > 0}>
-              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleReset}>
-            <p style={styles.hint}>OTP verified for <b>{email}</b></p>
-            <input style={styles.input} type="password" placeholder="New Password" required minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-            <input style={styles.input} type="password" placeholder="Confirm Password" required minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-            <button style={styles.btn} type="submit" disabled={resetting}>{resetting ? 'Resetting...' : 'Reset Password'}</button>
-            <button type="button" style={styles.secondaryBtn} onClick={() => setStep(2)} disabled={resetting}>
-              Back to OTP
-            </button>
-          </form>
+        <div style={styles.logoRow}>
+          <span style={styles.logoIcon}>ES</span>
+          <span style={styles.logoText}>EVENTSPHERE</span>
+        </div>
+
+        <h2 style={styles.title}>Reset Password</h2>
+
+        {step === 1 && (
+          <>
+            <p style={styles.subtitle}>Enter your email to receive a reset OTP</p>
+            <form onSubmit={handleForgot}>
+              <label style={styles.label}>Email</label>
+              <input
+                className="form-input"
+                type="email"
+                placeholder="you@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <button className="btn-primary" type="submit" disabled={submitting}>
+                {submitting ? 'Sending OTP...' : 'Send Reset OTP'}
+              </button>
+            </form>
+          </>
         )}
+
+        {step === 2 && (
+          <>
+            <p style={styles.subtitle}>
+              OTP sent to <strong style={{ color: 'var(--text)' }}>{email}</strong>
+            </p>
+            <form onSubmit={handleVerifyOtp}>
+              <label style={styles.label}>6-digit OTP</label>
+              <input
+                className="form-input"
+                placeholder="Enter OTP from email"
+                required
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                style={{ letterSpacing: '6px', fontSize: '1.2rem', textAlign: 'center' }}
+              />
+              <button className="btn-primary" type="submit" disabled={verifyingOtp} style={{ marginBottom: '10px' }}>
+                {verifyingOtp ? 'Verifying...' : 'Verify OTP'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleResend}
+                disabled={submitting || resendCooldown > 0}
+              >
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+              </button>
+            </form>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <p style={styles.subtitle}>
+              OTP verified for <strong style={{ color: 'var(--text)' }}>{email}</strong>
+            </p>
+            <form onSubmit={handleReset}>
+              <label style={styles.label}>New Password</label>
+              <input
+                className="form-input"
+                type="password"
+                placeholder="At least 8 characters"
+                required
+                minLength={8}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <label style={styles.label}>Confirm Password</label>
+              <input
+                className="form-input"
+                type="password"
+                placeholder="Repeat new password"
+                required
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+              <button className="btn-primary" type="submit" disabled={resetting} style={{ marginBottom: '10px' }}>
+                {resetting ? 'Resetting...' : 'Reset Password'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setStep(2)}
+                disabled={resetting}
+              >
+                Back to OTP
+              </button>
+            </form>
+          </>
+        )}
+
+        <p style={styles.footer}>
+          Remembered it? <Link to="/login" style={styles.link}>Back to Login</Link>
+        </p>
       </div>
     </div>
   );
 }
 
 const styles = {
-  page: { minHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
-  card: { width: '100%', maxWidth: '380px', padding: '2rem', border: '1px solid #ddd', borderRadius: '10px' },
-  title: { textAlign: 'center', marginBottom: '1.5rem', fontWeight: 'bold' },
-  hint: { color: '#666', fontSize: '0.9rem', marginBottom: '12px' },
-  input: { display: 'block', width: '100%', padding: '9px 12px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.95rem' },
-  btn: { width: '100%', padding: '9px', background: '#111', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-  secondaryBtn: { width: '100%', padding: '9px', background: '#fff', color: '#111', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' },
+  page: {
+    minHeight: 'calc(100vh - 60px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px 20px',
+    background: 'var(--bg)',
+  },
+  card: {
+    width: '100%',
+    maxWidth: '400px',
+    padding: '36px 32px',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    boxShadow: 'var(--shadow-md)',
+  },
+  logoRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    marginBottom: '24px',
+  },
+  logoIcon: { fontSize: '0.82rem', color: 'var(--accent)', fontWeight: '800' },
+  logoText: { fontWeight: '800', fontSize: '1.1rem', letterSpacing: '1.5px', color: 'var(--text)' },
+  title: { textAlign: 'center', fontSize: '1.4rem', fontWeight: '700', marginBottom: '4px', color: 'var(--text)' },
+  subtitle: { textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '24px' },
+  label: { display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text)', marginBottom: '5px' },
+  footer: { textAlign: 'center', marginTop: '20px', fontSize: '0.88rem', color: 'var(--text-muted)' },
+  link: { color: 'var(--accent)', fontWeight: '600' },
 };
