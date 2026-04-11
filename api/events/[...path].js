@@ -148,7 +148,13 @@ module.exports = async function handler(req, res) {
   try {
     await connectDB();
 
-    const segments = Array.isArray(req.query.path) ? req.query.path : [req.query.path].filter(Boolean);
+    // Extract path segments from req.url directly — req.query.path is unreliable
+    // in some Vercel CLI deployment modes.
+    const urlPath      = (req.url || '').split('?')[0];
+    const afterEvents  = urlPath.replace(/^\/api\/events\/?/, '');
+    const fromUrl      = afterEvents ? afterEvents.split('/') : [];
+    const fromQuery    = Array.isArray(req.query.path) ? req.query.path : [req.query.path].filter(Boolean);
+    const segments     = fromUrl.length ? fromUrl : fromQuery;
 
     // /api/events/admin/all
     if (segments[0] === 'admin' && segments[1] === 'all' && segments.length === 2) {

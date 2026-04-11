@@ -261,8 +261,13 @@ module.exports = async function handler(req, res) {
   try {
     await connectDB();
 
+    // Extract route from req.url directly — req.query.path is unreliable in
+    // some Vercel CLI deployment modes.  req.url is always populated.
+    const urlPath  = (req.url || '').split('?')[0];           // strip query string
+    const afterAuth = urlPath.replace(/^\/api\/auth\/?/, ''); // strip /api/auth/
+    // Fallback to req.query.path if url-based extraction yields nothing
     const segments = req.query.path || [];
-    const route    = Array.isArray(segments) ? segments.join('/') : String(segments);
+    const route    = afterAuth || (Array.isArray(segments) ? segments.join('/') : String(segments));
 
     switch (route) {
       case 'register':          return await handleRegister(req, res);
