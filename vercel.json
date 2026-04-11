@@ -13,11 +13,6 @@
     }
   ],
 
-  "functions": {
-    "api/*.js":    { "maxDuration": 30 },
-    "api/**/*.js": { "maxDuration": 30 }
-  },
-
   "headers": [
     {
       "source": "/api/(.*)",
