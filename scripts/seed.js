@@ -15,9 +15,9 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt   = require('bcryptjs');
-const User     = require('../lib/models/User');
-const Event    = require('../lib/models/Event');
-const Booking  = require('../lib/models/Booking');
+const User     = require('../backend/models/user');
+const Event    = require('../backend/models/event');
+const Booking  = require('../backend/models/booking');
 
 const { MONGO_URI } = process.env;
 if (!MONGO_URI) {

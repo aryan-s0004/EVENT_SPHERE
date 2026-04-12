@@ -24,6 +24,7 @@ const logger             = require('./utils/logger');
 const authRoutes    = require('./api/auth-routes');
 const eventRoutes   = require('./api/event-routes');
 const bookingRoutes = require('./api/booking-routes');
+const seedRoutes    = require('./api/seed-routes');
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 
@@ -105,6 +106,7 @@ const createApp = () => {
   app.use('/api/auth',     authRoutes);
   app.use('/api/events',   eventRoutes);
   app.use('/api/bookings', bookingRoutes);
+  app.use('/api/seed',     seedRoutes);
 
   // ── 404 handler ────────────────────────────────────────────────────────────
   app.use((_req, res) =>
