@@ -43,10 +43,9 @@ export default function Events() {
     }
   }, [search, category]);
 
+  // Fetch events on mount and whenever search/category changes
   useEffect(() => {
     fetchEvents();
-    const intervalId = window.setInterval(() => fetchEvents({ silent: true }), 5000);
-    return () => window.clearInterval(intervalId);
   }, [fetchEvents]);
 
   const handleSearch = (e) => {

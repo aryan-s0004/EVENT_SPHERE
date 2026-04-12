@@ -35,10 +35,9 @@ export default function EventDetail() {
     }
   };
 
+  // Fetch event details on mount
   useEffect(() => {
     fetchEvent();
-    const intervalId = window.setInterval(() => fetchEvent({ silent: true }), 5000);
-    return () => window.clearInterval(intervalId);
   }, [id]);
 
   const handleBook = async () => {
@@ -78,7 +77,7 @@ export default function EventDetail() {
 
   return (
     <div className="container">
-      <Link to="/events" style={styles.backLink}>Back to Events</Link>
+      <Link to="/events" style={styles.backLink}>← Back to Events</Link>
 
       {event.image && (
         <img src={resolveAssetUrl(event.image)} alt={event.title} style={styles.banner} />

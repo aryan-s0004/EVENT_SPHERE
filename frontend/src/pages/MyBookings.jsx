@@ -5,11 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import api, { getErrorMessage, resolveAssetUrl } from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 
+// Status colors: Pending = Yellow, Approved = Green, Rejected = Red, Cancelled = Grey
 const STATUS_CONFIG = {
-  pending: { label: 'Waiting for approval', bg: 'var(--warning-bg)', fg: 'var(--warning-fg)' },
-  approved: { label: 'Confirmed', bg: 'var(--success-bg)', fg: 'var(--success-fg)' },
-  rejected: { label: 'Declined', bg: 'var(--error-bg)', fg: 'var(--error-fg)' },
-  cancelled: { label: 'Cancelled', bg: 'var(--neutral-bg)', fg: 'var(--neutral-fg)' },
+  pending:   { label: 'Pending — Waiting for admin approval', bg: '#fef3c7', fg: '#92400e' },
+  approved:  { label: 'Approved — Booking Confirmed!',        bg: '#d1fae5', fg: '#065f46' },
+  rejected:  { label: 'Rejected — Booking Declined',         bg: '#fee2e2', fg: '#991b1b' },
+  cancelled: { label: 'Cancelled',                           bg: '#f3f4f6', fg: '#6b7280' },
 };
 
 export default function MyBookings() {
@@ -31,11 +32,10 @@ export default function MyBookings() {
     }
   };
 
+  // Fetch bookings on mount (manual refresh available via button)
   useEffect(() => {
-    if (user?.role === 'admin') return undefined;
+    if (user?.role === 'admin') return;
     fetchBookings();
-    const intervalId = window.setInterval(() => fetchBookings({ silent: true }), 5000);
-    return () => window.clearInterval(intervalId);
   }, [user?.role]);
 
   if (user?.role === 'admin') return <Navigate to="/admin" replace />;
@@ -56,7 +56,9 @@ export default function MyBookings() {
 
   return (
     <div className="container">
-      <h2 style={styles.pageTitle}>My Bookings</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
+        <h2 style={{ ...styles.pageTitle, marginBottom: 0 }}>My Bookings</h2>
+      </div>
       <ConfirmModal
         open={Boolean(bookingToCancel)}
         title="Cancel booking?"
@@ -220,6 +222,16 @@ const styles = {
     border: '1.5px solid var(--error-fg)',
     background: 'transparent',
     color: 'var(--error-fg)',
+    cursor: 'pointer',
+    fontSize: '0.85rem',
+    fontWeight: '600',
+  },
+  refreshBtn: {
+    padding: '7px 16px',
+    borderRadius: '8px',
+    border: '1.5px solid var(--border)',
+    background: 'var(--surface)',
+    color: 'var(--text)',
     cursor: 'pointer',
     fontSize: '0.85rem',
     fontWeight: '600',

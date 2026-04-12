@@ -60,7 +60,7 @@ export default function Home() {
       </div>
 
       <div className="container">
-        <div style={styles.statsBar}>
+        <div style={styles.statsBar} className="glass">
           {HOME_STATS.map(({ label, getValue }) => (
             <div key={label} style={styles.statItem}>
               <div style={styles.statValue}>

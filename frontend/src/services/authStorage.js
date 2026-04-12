@@ -1,3 +1,16 @@
+// Auth token is stored in sessionStorage (NOT localStorage).
+//
+// Why sessionStorage for multi-user support:
+//   - sessionStorage is ISOLATED per browser tab.
+//   - Tab 1 (Admin) and Tab 2 (User) each have their own independent session.
+//   - Different browsers (Chrome + Edge) are also fully isolated.
+//   - Closing a tab clears the session automatically — no manual logout needed.
+//
+// Multi-user testing flow:
+//   Browser 1 / Tab 1 → login as admin
+//   Browser 2 / Tab 2 (or incognito) → login as user
+//   Both sessions run simultaneously without conflict.
+
 const TOKEN_KEY = 'token';
 
 const getSessionStorage = () => {

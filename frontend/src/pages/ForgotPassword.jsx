@@ -128,13 +128,12 @@ export default function ForgotPassword() {
         {step === 2 && (
           <>
             <p style={styles.subtitle}>
-              OTP sent to <strong style={{ color: 'var(--text)' }}>{email}</strong>
+              Check your inbox at <strong style={{ color: 'var(--text)' }}>{email}</strong>
             </p>
             <form onSubmit={handleVerifyOtp}>
-              <label style={styles.label}>6-digit OTP</label>
+              <label style={styles.label}>Enter OTP</label>
               <input
                 className="form-input"
-                placeholder="Enter OTP from email"
                 required
                 maxLength={6}
                 value={otp}

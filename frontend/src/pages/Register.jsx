@@ -116,13 +116,12 @@ export default function Register() {
           <>
             <h2 style={styles.title}>Verify your email</h2>
             <p style={styles.subtitle}>
-              OTP sent to <strong style={{ color: 'var(--text)' }}>{form.email}</strong>
+              Check your inbox at <strong style={{ color: 'var(--text)' }}>{form.email}</strong>
             </p>
             <form onSubmit={handleVerify}>
-              <label style={styles.label}>6-digit OTP</label>
+              <label style={styles.label}>Enter OTP</label>
               <input
                 className="form-input"
-                placeholder="Enter OTP from email"
                 required
                 maxLength={6}
                 value={otp}

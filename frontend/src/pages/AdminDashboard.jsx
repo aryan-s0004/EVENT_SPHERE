@@ -156,17 +156,17 @@ export default function AdminDashboard() {
   };
 
   const stats = [
-    { label: 'Total Events',      value: events.length,                                               color: 'var(--accent)'   },
-    { label: 'Active Events',     value: events.filter((e) => e.status === 'active').length,          color: 'var(--success-fg)' },
-    { label: 'Total Users',       value: analytics?.users?.total ?? '—',                              color: 'var(--primary)'  },
-    { label: 'Total Bookings',    value: bookings.length,                                             color: '#8b5cf6'         },
-    { label: 'Pending Approval',  value: bookings.filter((b) => b.status === 'pending').length,       color: 'var(--warning-fg)' },
-    { label: 'Revenue Confirmed', value: analytics ? `Rs ${(analytics.bookings?.revenue || 0).toLocaleString('en-IN')}` : '—', color: '#10b981' },
+    { label: 'Total Events',     value: events.length,                                         color: 'var(--accent)'   },
+    { label: 'Active Events',    value: events.filter((e) => e.status === 'active').length,    color: 'var(--success-fg)' },
+    { label: 'Total Bookings',   value: bookings.length,                                       color: '#8b5cf6'          },
+    { label: 'Pending Approval', value: bookings.filter((b) => b.status === 'pending').length, color: 'var(--warning-fg)' },
   ];
 
   return (
     <div className="container">
-      <h2 style={styles.pageTitle}>Admin Dashboard</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
+        <h2 style={{ ...styles.pageTitle, marginBottom: 0 }}>Admin Dashboard</h2>
+      </div>
       <ConfirmModal
         open={Boolean(eventToDelete)}
         title="Delete event?"
@@ -485,6 +485,16 @@ export default function AdminDashboard() {
 
 const styles = {
   pageTitle: { fontSize: '1.5rem', fontWeight: '800', marginBottom: '20px', color: 'var(--text)' },
+  refreshBtn: {
+    padding: '7px 16px',
+    borderRadius: '8px',
+    border: '1.5px solid var(--border)',
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    cursor: 'pointer',
+    fontSize: '0.85rem',
+    fontWeight: '600',
+  },
   statsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
