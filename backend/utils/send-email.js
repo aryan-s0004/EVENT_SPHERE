@@ -26,14 +26,20 @@ const hasEmailConfig = () =>
 const getTransporter = () => {
   if (transporter) return transporter;
 
+  // Port 465 = implicit SSL (secure:true).  Port 587 = STARTTLS (secure:false).
+  // Vercel and most cloud providers block port 587 outbound; 465 works reliably.
+  const port   = Number(process.env.EMAIL_PORT) || 465;
+  const secure = process.env.EMAIL_SECURE === 'false' ? false : port === 465;
+
   transporter = nodemailer.createTransport({
-    host:   process.env.EMAIL_HOST,
-    port:   Number(process.env.EMAIL_PORT),
-    secure: Number(process.env.EMAIL_PORT) === 465,
+    host:   process.env.EMAIL_HOST   || 'smtp.gmail.com',
+    port,
+    secure,
     auth:   { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    connectionTimeout: 10000,
-    greetingTimeout:   10000,
-    socketTimeout:     10000,
+    tls:    { rejectUnauthorized: false },
+    connectionTimeout: 8000,
+    greetingTimeout:   8000,
+    socketTimeout:     8000,
   });
 
   return transporter;
