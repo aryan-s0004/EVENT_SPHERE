@@ -60,8 +60,12 @@ router.post('/', guardSeed, asyncHandler(async (req, res) => {
 
   let admin = await User.findOne({ email: adminEmail });
   if (admin) {
-    if (admin.role !== 'admin') { admin.role = 'admin'; admin.isVerified = true; await admin.save(); }
-    log.push(`admin: already exists (${adminEmail})`);
+    // Sync role, verified status, and password from env vars
+    admin.role       = 'admin';
+    admin.isVerified = true;
+    admin.password   = await bcrypt.hash(adminPass, 10);
+    await admin.save({ validateModifiedOnly: true });
+    log.push(`admin: synced password + role (${adminEmail})`);
   } else {
     const hashed = await bcrypt.hash(adminPass, 10);
     admin = await User.create({ name: adminName, email: adminEmail, password: hashed, role: 'admin', isVerified: true });
