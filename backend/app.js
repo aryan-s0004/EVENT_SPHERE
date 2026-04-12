@@ -1,13 +1,6 @@
 /**
- * server/app.js
- * Express application factory.
- *
- * Configures:
- *  - Security: helmet, strict CORS, global rate limiter
- *  - Parsing:  JSON (5 kb limit), URL-encoded
- *  - DX:       morgan request logging (dev only), compression
- *  - Routes:   /api/auth, /api/events, /api/bookings
- *  - Error:    global async error handler
+ * app.js — Express application factory.
+ * Builds and returns the configured Express app for each serverless invocation.
  */
 'use strict';
 
@@ -21,10 +14,10 @@ const { globalLimiter }  = require('./middleware/rate-limiter-middleware');
 const { errorHandler }   = require('./middleware/error-middleware');
 const logger             = require('./utils/logger');
 
-const authRoutes    = require('./api/auth-routes');
-const eventRoutes   = require('./api/event-routes');
-const bookingRoutes = require('./api/booking-routes');
-const seedRoutes    = require('./api/seed-routes');
+const authRoutes    = require('./routes/auth-routes');
+const eventRoutes   = require('./routes/event-routes');
+const bookingRoutes = require('./routes/booking-routes');
+const seedRoutes    = require('./routes/seed-routes');
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 

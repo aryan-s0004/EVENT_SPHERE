@@ -1,11 +1,22 @@
 /**
- * server/services/bookingService.js
- * Booking management business logic.
+ * booking-service.js — Booking Business Logic
+ * ---------------------------------------------
+ * Handles all booking operations: creation, cancellation, and admin approval.
  *
- * Key design decisions:
- *  - Seat deduction uses findOneAndUpdate with $gte guard (atomic — prevents overselling)
- *  - Emails are fire-and-forget (failure never aborts the booking)
- *  - Duplicate booking prevented by MongoDB partial unique index
+ * Key concepts:
+ *   - FREE events  → booking is auto-approved, seats deducted immediately
+ *   - PAID events  → booking stays "pending" until admin approves/rejects
+ *   - Seats are only deducted when a booking is APPROVED (not on creation)
+ *   - Seat deduction is atomic (uses $gte guard to prevent overselling)
+ *   - Emails are fire-and-forget (email failure never cancels the booking)
+ *   - Duplicate bookings blocked by a MongoDB partial unique index
+ *
+ * Functions in this file:
+ *   bookEvent()       → user books a seat (free = instant, paid = pending)
+ *   getUserBookings() → list all bookings for one user
+ *   cancelBooking()   → user cancels their own booking
+ *   getAllBookings()  → admin sees every booking
+ *   processBooking()  → admin approves or rejects a pending booking
  */
 'use strict';
 
@@ -53,17 +64,22 @@ const buildEmailHtml = ({ heading, name, eventTitle, eventDate, seats, totalPric
 
 /**
  * bookEvent({ eventId, seats }, user)
+ * Called when a user clicks "Book" on any event.
+ * Splits into two paths: free events and paid events.
  */
 const bookEvent = async ({ eventId, seats }, user) => {
+  // Step 1: Admins cannot book events — they manage them
   if (user.role === 'admin') {
     throw ApiError.forbidden('Admins cannot book events', 'ADMIN_BOOKING_DISABLED');
   }
 
+  // Step 2: Validate the event — must exist, be active, and have enough seats
   const event = await Event.findById(eventId);
   if (!event)                       throw ApiError.notFound('Event not found', 'EVENT_NOT_FOUND');
   if (event.status !== 'active')    throw ApiError.badRequest('Event is not available', 'EVENT_UNAVAILABLE');
   if (event.availableSeats < seats) throw ApiError.conflict('Not enough seats available', 'EVENT_FULL');
 
+  // Step 3: Prevent duplicate bookings (user cannot book the same event twice)
   const existing = await Booking.findOne({
     user:   user._id,
     event:  eventId,
@@ -72,10 +88,11 @@ const bookEvent = async ({ eventId, seats }, user) => {
   if (existing) throw ApiError.conflict('You already have an active booking for this event', 'BOOKING_EXISTS');
 
   const totalPrice       = event.price * seats;
-  const requiresApproval = event.price > 0;
+  const requiresApproval = event.price > 0;   // paid = needs admin approval
   const eventDateStr     = `${fmtDate(event.date)} at ${event.time}`;
 
-  // ── Paid event: create pending booking (no seat deduction yet) ────────────
+  // ── PATH A: Paid event — create pending booking (no seat deduction yet) ──
+  //    Seats are only deducted AFTER admin approves (see processBooking below)
   if (requiresApproval) {
     try {
       const booking = await Booking.create({
@@ -105,7 +122,8 @@ const bookEvent = async ({ eventId, seats }, user) => {
     }
   }
 
-  // ── Free event: atomic seat deduction then create approved booking ─────────
+  // ── PATH B: Free event — deduct seats atomically, then create approved booking
+  //    $gte guard ensures we never deduct more seats than available (race-safe)
   const updatedEvent = await Event.findOneAndUpdate(
     { _id: eventId, status: 'active', availableSeats: { $gte: seats } },
     { $inc: { availableSeats: -seats } },
@@ -199,15 +217,28 @@ const getAllBookings = async () => {
 };
 
 /**
- * processBooking(bookingId, status, adminUserId) — approve or reject
+ * processBooking(bookingId, status, adminUserId) — admin approves or rejects
+ *
+ * Approval path:
+ *   1. Find the pending booking
+ *   2. Atomically deduct seats from the event
+ *   3. If event is now full → auto-reject instead
+ *   4. Mark booking as approved, send confirmation email
+ *
+ * Rejection path:
+ *   1. Find the pending booking
+ *   2. Mark booking as rejected (no seat change)
+ *   3. Send rejection email
  */
 const processBooking = async (bookingId, status, adminUserId) => {
+  // Step 1: Load the booking with user + event details
   const current = await Booking.findById(bookingId)
     .populate('user',  'name email')
     .populate('event', 'title date time location availableSeats totalSeats status');
 
   if (!current) throw ApiError.notFound('Booking not found', 'BOOKING_NOT_FOUND');
 
+  // Step 2: Only pending bookings can be processed — guard against double-click
   if (current.status !== 'pending') {
     return { booking: current, event: current.event, message: 'Booking already processed', code: 'BOOKING_ALREADY_PROCESSED' };
   }
@@ -216,7 +247,7 @@ const processBooking = async (bookingId, status, adminUserId) => {
     ? `${fmtDate(current.event.date)} at ${current.event.time}`
     : 'N/A';
 
-  // ── Rejection ──────────────────────────────────────────────────────────────
+  // ── REJECTION PATH ─────────────────────────────────────────────────────────
   if (status === 'rejected') {
     const rejected = await Booking.findOneAndUpdate(
       { _id: bookingId, status: 'pending' },
@@ -252,7 +283,8 @@ const processBooking = async (bookingId, status, adminUserId) => {
     return { booking: rejected, event: rejected.event, message: 'Booking rejected' };
   }
 
-  // ── Approval ───────────────────────────────────────────────────────────────
+  // ── APPROVAL PATH ──────────────────────────────────────────────────────────
+  // Step 3: Mark booking as approved
   const approved = await Booking.findOneAndUpdate(
     { _id: bookingId, status: 'pending' },
     { $set: { status: 'approved', processedAt: new Date(), processedBy: adminUserId } },
@@ -266,7 +298,7 @@ const processBooking = async (bookingId, status, adminUserId) => {
     return { booking: latest, event: latest?.event, message: 'Booking already processed', code: 'BOOKING_ALREADY_PROCESSED' };
   }
 
-  // Atomic seat deduction — auto-reject if event is now full
+  // Step 4: Atomically deduct seats — if event is now full, auto-reject instead
   const updatedEvent = await Event.findOneAndUpdate(
     { _id: approved.event._id, status: 'active', availableSeats: { $gte: approved.seats } },
     { $inc: { availableSeats: -approved.seats } },

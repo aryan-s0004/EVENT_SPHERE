@@ -13,6 +13,8 @@ const OPTIONAL_WARN = [
 ];
 
 const validateEnv = () => {
+  // Validation ensures required keys are present before starting
+
   const missing = REQUIRED.filter((key) => !process.env[key]);
 
   if (missing.length > 0) {

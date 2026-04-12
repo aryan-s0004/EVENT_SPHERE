@@ -8,18 +8,33 @@ const bookingService = require('../services/booking-service');
 const asyncHandler   = require('../utils/async-handler');
 
 exports.bookEvent = asyncHandler(async (req, res) => {
-  const result = await bookingService.bookEvent(req.body, req.user);
-  res.status(201).json({ success: true, ...result });
+  try {
+    const result = await bookingService.bookEvent(req.body, req.user);
+    res.status(201).json({ success: true, ...result });
+  } catch (err) {
+    console.error('[bookingController:bookEvent] Error:', err);
+    throw err;
+  }
 });
 
 exports.getUserBookings = asyncHandler(async (req, res) => {
-  const bookings = await bookingService.getUserBookings(req.user._id);
-  res.status(200).json({ success: true, bookings });
+  try {
+    const bookings = await bookingService.getUserBookings(req.user._id);
+    res.status(200).json({ success: true, bookings });
+  } catch (err) {
+    console.error('[bookingController:getUserBookings] Error:', err);
+    throw err;
+  }
 });
 
 exports.cancelBooking = asyncHandler(async (req, res) => {
-  const result = await bookingService.cancelBooking(req.params.id, req.user._id);
-  res.status(200).json({ success: true, ...result });
+  try {
+    const result = await bookingService.cancelBooking(req.params.id, req.user._id);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    console.error('[bookingController:cancelBooking] Error:', err);
+    throw err;
+  }
 });
 
 exports.getAllBookings = asyncHandler(async (req, res) => {

@@ -8,18 +8,33 @@ const eventService = require('../services/event-service');
 const asyncHandler = require('../utils/async-handler');
 
 exports.getEvents = asyncHandler(async (req, res) => {
-  const result = await eventService.getEvents(req.query);
-  res.status(200).json({ success: true, ...result });
+  try {
+    const result = await eventService.getEvents(req.query);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    console.error('[eventController:getEvents] Error:', err);
+    throw err;
+  }
 });
 
 exports.getEvent = asyncHandler(async (req, res) => {
-  const event = await eventService.getEvent(req.params.id);
-  res.status(200).json({ success: true, event });
+  try {
+    const event = await eventService.getEvent(req.params.id);
+    res.status(200).json({ success: true, event });
+  } catch (err) {
+    console.error('[eventController:getEvent] Error:', err);
+    throw err;
+  }
 });
 
 exports.createEvent = asyncHandler(async (req, res) => {
-  const event = await eventService.createEvent(req.body, req.file, req.user._id);
-  res.status(201).json({ success: true, event });
+  try {
+    const event = await eventService.createEvent(req.body, req.file, req.user._id);
+    res.status(201).json({ success: true, event });
+  } catch (err) {
+    console.error('[eventController:createEvent] Error:', err);
+    throw err;
+  }
 });
 
 exports.updateEvent = asyncHandler(async (req, res) => {

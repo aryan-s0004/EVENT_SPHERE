@@ -1,10 +1,23 @@
 /**
- * server/middlewares/error.middleware.js
- * Global Express error handler — must be registered LAST (4-argument signature).
+ * error-middleware.js — Global Error Handler
+ * --------------------------------------------
+ * Every error thrown anywhere in the app ends up here.
  *
- * All errors, whether thrown manually (new ApiError) or propagated by
- * asyncHandler, end up here.  Operational errors get a structured JSON
- * response.  Programmer errors (bugs) get logged and return a generic 500.
+ * How it works:
+ *   1. asyncHandler catches any thrown error in a controller
+ *   2. Passes it to Express via next(error)
+ *   3. This file's errorHandler function receives it
+ *   4. Converts it to a clean JSON response
+ *
+ * Error types handled:
+ *   - ApiError (our own)     → uses err.statusCode and err.code directly
+ *   - Mongoose ValidationError → 400 with field-level messages
+ *   - Mongoose CastError     → 400 "Invalid ID format"
+ *   - Mongoose duplicate key → 409 "Already exists"
+ *   - Everything else        → 500 "Something went wrong"
+ *
+ * All error responses follow this shape:
+ *   { success: false, code: "MACHINE_CODE", message: "Human message" }
  */
 const logger   = require('../utils/logger');
 const ApiError = require('../utils/api-error');
@@ -57,6 +70,7 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
   }
 
   // Programmer / unexpected errors — log full stack, hide details from client
+  console.error("ERROR STACK:", err.stack); // Added per debug instructions
   logger.error('Unhandled error', {
     err:    err.message,
     stack:  err.stack,

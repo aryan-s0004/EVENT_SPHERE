@@ -1,14 +1,6 @@
 /**
- * server/services/authService.js
- * All authentication business logic.
- * Controllers are thin — they call these functions and format the HTTP response.
- *
- * Service layer responsibilities:
- *  - Database reads/writes
- *  - Domain validation (OTP expiry, duplicate users, etc.)
- *  - Side effects (send email, set OTP fields)
- *
- * No req/res objects here — pure business logic, independently testable.
+ * auth-service.js — Authentication business logic.
+ * Controllers call these functions and return the result.
  */
 'use strict';
 
@@ -56,13 +48,11 @@ const cooldownSeconds = (lastSentAt) => {
  */
 const register = async ({ name, email, password }) => {
   let user = await User.findOne({ email });
-
   if (user?.isVerified) {
     throw ApiError.conflict('An account with this email already exists', 'EMAIL_IN_USE');
   }
 
-
-  const isNew          = !user;
+  const isNew = !user;
   const previousOtpState = user
     ? { otp: user.otp, otpExpiry: user.otpExpiry, otpLastSentAt: user.otpLastSentAt }
     : null;
@@ -87,6 +77,7 @@ const register = async ({ name, email, password }) => {
   user.otpLastSentAt = new Date();
   await user.save();
 
+
   let delivery;
   try {
     delivery = await sendEmail({
@@ -97,7 +88,7 @@ const register = async ({ name, email, password }) => {
       debugValue: user.otp,
     });
   } catch (emailError) {
-    // Roll back so the user can retry immediately
+    // Roll back so user can retry immediately
     if (isNew) {
       await User.findByIdAndDelete(user._id);
     } else if (previousOtpState) {
@@ -123,7 +114,6 @@ const verifyOTP = async ({ userId, email, otp }) => {
   const user = userId
     ? await User.findById(userId)
     : await User.findOne({ email });
-
   if (!user) throw ApiError.notFound('User not found', 'USER_NOT_FOUND');
 
   if (user.isVerified) {
@@ -133,7 +123,6 @@ const verifyOTP = async ({ userId, email, otp }) => {
   if (!user.otp || user.otp !== otp) {
     throw ApiError.badRequest('Invalid OTP', 'OTP_INVALID');
   }
-
   if (!user.otpExpiry || Date.now() > new Date(user.otpExpiry).getTime()) {
     throw ApiError.badRequest('OTP has expired. Please request a new one.', 'OTP_EXPIRED');
   }
@@ -153,7 +142,6 @@ const verifyOTP = async ({ userId, email, otp }) => {
  */
 const login = async ({ email, password }) => {
   const user = await User.findOne({ email }).select('+password');
-
   if (!user || !user.password) {
     throw ApiError.badRequest('Invalid email or password', 'INVALID_CREDENTIALS');
   }
@@ -192,6 +180,7 @@ const forgotPassword = async ({ email }) => {
   user.resetOtpLastSentAt = new Date();
   user.resetOtpVerifiedAt = undefined;
   await user.save();
+
 
   let delivery;
   try {

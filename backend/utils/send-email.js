@@ -1,19 +1,14 @@
-// backend/utils/send-email.js
-// Email sender with three-tier delivery:
-//   1. Resend API   (set RESEND_API_KEY) — recommended for Vercel/serverless
-//   2. SMTP/Gmail   (set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS)
-//   3. Console log  (set OTP_CONSOLE_FALLBACK=true) — dev / last resort
-//
-// Priority order: Resend → SMTP → Console fallback
+// send-email.js — Three-tier email delivery: Resend API → SMTP → Console fallback.
+'use strict';
 
 const nodemailer = require('nodemailer');
-const ApiError   = require('./api-error');
+const ApiError = require('./api-error');
 
 // ── Resend (HTTP API — works on Vercel, no SMTP port needed) ─────────────────
 
 const sendViaResend = async ({ to, subject, html }) => {
   const { Resend } = require('resend');
-  const resend     = new Resend(process.env.RESEND_API_KEY);
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   const from = process.env.EMAIL_USER
     ? `EVENTSPHERE <${process.env.EMAIL_USER}>`
@@ -32,49 +27,75 @@ const sendViaResend = async ({ to, subject, html }) => {
 
 // ── SMTP (nodemailer) ─────────────────────────────────────────────────────────
 
-const SMTP_KEYS = ['EMAIL_HOST', 'EMAIL_USER', 'EMAIL_PASS'];
-let transporter  = null;
+const SMTP_KEYS = ['EMAIL_USER', 'EMAIL_PASS'];
+let transporter = null;
+let transporterVerified = false;
 
 const hasSMTPConfig = () => SMTP_KEYS.every((k) => String(process.env[k] || '').trim());
 
 const getTransporter = () => {
   if (transporter) return transporter;
 
-  // Port 465 = implicit SSL (works on Vercel).  587 = STARTTLS (often blocked on cloud).
-  const port   = Number(process.env.EMAIL_PORT) || 465;
-  const secure = port === 465;
-
+  // Optimized for step-by-step debug requirements: use Gmail service shorthand
   transporter = nodemailer.createTransport({
-    host:   process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port,
-    secure,
-    auth:   { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    tls:    { rejectUnauthorized: false },
-    connectionTimeout: 8000,
-    greetingTimeout:   8000,
-    socketTimeout:     8000,
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS, // MUST be a 16-character App Password
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 
   return transporter;
 };
 
+// Verify SMTP credentials once
+const verifyTransporter = async () => {
+  if (transporterVerified) return;
+  try {
+    const transport = getTransporter();
+    await transport.verify();
+    transporterVerified = true;
+  } catch (err) {
+    transporter = null;
+    const hint = err.code === 'EAUTH'
+      ? 'Gmail rejected credentials. Make sure EMAIL_PASS is a 16-char App Password (not your Gmail password).'
+      : err.message;
+    throw Object.assign(err, { hint });
+  }
+};
+
 const sendViaSMTP = async ({ to, subject, html }) => {
+  await verifyTransporter();
+
   await getTransporter().sendMail({
-    from:    `"EVENTSPHERE" <${process.env.EMAIL_USER}>`,
+    from: `"EVENTSPHERE" <${process.env.EMAIL_USER}>`,
     to,
     subject,
     html,
   });
+
   return { delivered: true, fallback: false, via: 'smtp' };
 };
 
 // ── Console fallback ──────────────────────────────────────────────────────────
 
-const consoleAllowed = () => process.env.OTP_CONSOLE_FALLBACK === 'true';
+const consoleAllowed = () => process.env.OTP_CONSOLE_FALLBACK === 'true' || process.env.NODE_ENV !== 'production';
 
 const sendViaConsole = ({ to, subject, logLabel, debugValue }) => {
-  console.warn(`[email:${logLabel}] CONSOLE FALLBACK — To: ${to} | ${subject}`);
-  if (debugValue) console.log(`[email:${logLabel}] OTP: ${debugValue}`);
+  // FINALIZED OTP LOGGING: Matches "console.log('OTP:', otp)" request
+  console.warn(`\n${'─'.repeat(60)}`);
+  console.warn(`[email:FALLBACK] Sending to: ${to}`);
+  console.warn(`[email:FALLBACK] Subject: ${subject}`);
+  if (debugValue) {
+    console.log(`OTP: ${debugValue}`); // Explicit requested format
+    console.warn(`[email:FALLBACK] ┌─────────────────────────────────┐`);
+    console.warn(`[email:FALLBACK] │ CODE: ${debugValue}            │`);
+    console.warn(`[email:FALLBACK] └─────────────────────────────────┘`);
+  }
+  console.warn(`${'─'.repeat(60)}\n`);
   return { delivered: false, fallback: true, via: 'console' };
 };
 
@@ -82,44 +103,43 @@ const sendViaConsole = ({ to, subject, logLabel, debugValue }) => {
 
 /**
  * sendEmail({ to, subject, html, logLabel, debugValue })
- * @returns {{ delivered: boolean, fallback: boolean, via: string }}
- * @throws  {ApiError}
  */
 const sendEmail = async ({ to, subject, html, logLabel = 'mail', debugValue = '' }) => {
-  // 1. Resend API
+  // 1. Console Override for Dev/Debug if forced
+  if (process.env.FORCE_CONSOLE_OTP === 'true') {
+     return sendViaConsole({ to, subject, logLabel, debugValue });
+  }
+
+  // 2. Resend API
   if (process.env.RESEND_API_KEY) {
     try {
       return await sendViaResend({ to, subject, html });
     } catch (err) {
-      console.error(`[email:${logLabel}] Resend failed:`, err.message);
-      // fall through to SMTP
+      console.error(`[email:${logLabel}] Resend failed, trying SMTP...`);
     }
   }
 
-  // 2. SMTP
+  // 3. SMTP / Gmail
   if (hasSMTPConfig()) {
     try {
       return await sendViaSMTP({ to, subject, html });
     } catch (err) {
-      console.error(`[email:${logLabel}] SMTP failed for ${to}:`, err.message);
-      transporter = null; // reset for next attempt
+      console.error(`[email:${logLabel}] SMTP failed for ${to}: ${err.hint || err.message}`);
+      transporter = null;
+      transporterVerified = false;
 
-      if (err.code === 'EAUTH') {
-        if (consoleAllowed()) return sendViaConsole({ to, subject, logLabel, debugValue });
-        throw new ApiError(502, 'EMAIL_AUTH_FAILED',
-          'Gmail rejected credentials. Use a Gmail App Password (not your regular password).');
+      if (err.code === 'EAUTH' && consoleAllowed()) {
+        return sendViaConsole({ to, subject, logLabel, debugValue });
       }
-      // fall through to console
     }
   }
 
-  // 3. Console fallback
+  // 4. Default Fallback
   if (consoleAllowed()) {
     return sendViaConsole({ to, subject, logLabel, debugValue });
   }
 
-  throw new ApiError(503, 'EMAIL_SERVICE_UNAVAILABLE',
-    'Email delivery failed. Configure RESEND_API_KEY or enable OTP_CONSOLE_FALLBACK.');
+  throw new ApiError(503, 'EMAIL_SERVICE_UNAVAILABLE', 'Email delivery failed. Fix SMTP or set OTP_CONSOLE_FALLBACK=true');
 };
 
 module.exports = sendEmail;
