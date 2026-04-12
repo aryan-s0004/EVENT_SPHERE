@@ -55,8 +55,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-    const id = window.setInterval(() => fetchDashboardData({ silent: true }), 5000);
-    return () => window.clearInterval(id);
   }, []);
 
   const handleStatus = async (id, status) => {
