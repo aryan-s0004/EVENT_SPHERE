@@ -1,0 +1,50 @@
+EVENTSPHERE — PROJECT GUIDE & SYSTEM FLOW
+============================================================
+
+1. SYSTEM ARCHITECTURE
+------------------------------------------------------------
+EventSphere uses the MERN stack with a Service-Oriented MVC 
+architecture. The backend is designed for serverless execution
+on Vercel, using MongoDB Atlas for persistent storage.
+
+2. CORE SYSTEM FLOW
+------------------------------------------------------------
+A. AUTHENTICATION (The OTP Engine)
+   - User inputs email → Backend generates 6-digit cryptographic OTP.
+   - OTP is saved to DB (hashed) and sent via SMTP (Gmail) or Resend API.
+   - User verifies OTP → JWT (JSON Web Token) is issued.
+   - JWT is stored in HTTP-only cookies or LocalStorage for session persistence.
+
+B. EVENT MANAGEMENT
+   - Public: View / Search / Filter events.
+   - Admin: Create / Update / Delete events. Image uploads are handled 
+     via DataURIs or direct file streams to optimized storage.
+   - Logic: availableSeats = totalSeats - confirmedBookings.
+
+C. BOOKING FLOW
+   - User requests booking → System checks seat availability (Atomic).
+   - If approval is required (paid events) → Booking status is 'pending'.
+   - Admin approves → Seat is deducted, confirmation email is sent.
+
+3. DATABASE COLLECTIONS (MongoDB)
+------------------------------------------------------------
+- USERS: Name, Email, Hashed Password, Role (User/Admin), Verification status.
+- EVENTS: Title, Location, Price, Category, Date/Time, Remaining Capacity.
+- BOOKINGS: Links UserID to EventID, Status (Pending/Confirmed/Cancelled).
+
+4. DEPLOYMENT & SCALING
+------------------------------------------------------------
+- The app is split into /frontend (Vite) and /backend (Express).
+- vercel.json routes all /api requests to the serverless function.
+- Cross-site security is handled via Helmet and CORS whitelisting.
+
+5. SECURITY MEASURES
+------------------------------------------------------------
+- Bcrypt: Password hashing (12 salt rounds).
+- JWT: State-less authorization for all protected routes.
+- Rate Limiting: Prevents brute-force on OTP and login endpoints.
+- Env Masking: All sensitive keys are stored in Vercel/Local env.
+
+============================================================
+Developed by Aryan Sahu
+Repo: https://github.com/aryan-s0004/EVENT_SPHERE

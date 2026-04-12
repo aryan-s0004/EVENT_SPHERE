@@ -1,0 +1,36 @@
+DEPLOYMENT GUIDE: EVENTSPHERE (VERCEL)
+============================================================
+
+1. PROJECT PREREQUISITES
+------------------------------------------------------------
+- Install Vercel CLI: npm install -g vercel
+- Ensure MongoDB Atlas connection URI is ready.
+- Ensure Gmail App Password is generated.
+
+2. VERCEL CONFIGURATION (vercel.json)
+------------------------------------------------------------
+- Build Command: frontend build (Vite)
+- Output Dir: frontend/dist
+- Rewrites: /api/(.*) -> /api/index.js (Proxies all API calls to the serverless function)
+
+3. ENVIRONMENT VARIABLES (CRITICAL)
+------------------------------------------------------------
+Must be added in Vercel Dashboard or via CLI:
+- MONGO_URI: Your MongoDB Atlas string
+- JWT_SECRET: A random long string for security
+- EMAIL_USER: Your admin email address
+- EMAIL_PASS: Your 16-character App Password (NOT account password)
+- CLIENT_URL: Your production Vercel URL (e.g., https://eventsphere.vercel.app)
+
+4. DEPLOYMENT STEPS
+------------------------------------------------------------
+STEP 1: npx vercel (Deploys to a 'Preview' environment)
+STEP 2: Test the Preview URL (Registration, Login, Booking)
+STEP 3: npx vercel --prod (Promotes to main production URL)
+
+5. COMMON TROUBLESHOOTING
+------------------------------------------------------------
+- 500 INTERNAL SERVER ERROR: Usually a missing Environment Variable or IP Whitelist issue in MongoDB Atlas. Ensure "Allow Access from Anywhere (0.0.0.0/0)" is enabled in Atlas.
+- ROUTE NOT FOUND: Ensure your frontend API base URL points to /api and vercel.json rewrites are correct.
+- CORS ERRORS: Ensure process.env.CLIENT_URL in backend matches your actual Vercel domain.
+- EMAIL NOT WORKING: SMTP ports are often blocked. EventSphere handles this by prioritizing RESEND API or providing a log fallback.

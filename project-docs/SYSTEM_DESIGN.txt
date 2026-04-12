@@ -1,0 +1,43 @@
+SYSTEM DESIGN & FLOW: EVENTSPHERE
+============================================================
+
+1. USER FLOW (REGISTRATION & LOGIN)
+------------------------------------------------------------
+STEP 1: User fills registration form (Email, Password).
+STEP 2: System generates a 6-digit OTP and sends it to user's email.
+STEP 3: User enters OTP; if correct, account status becomes 'active'.
+STEP 4: User logs in; System returns a JWT (access token).
+STEP 5: React stores JWT in localStorage for subsequent requests.
+
+2. ADMIN FLOW (EVENT MANAGEMENT)
+------------------------------------------------------------
+STEP 1: Admin logs in to the dashboard.
+STEP 2: Admin can "Create Event" (Upload image, set date, title, desc).
+STEP 3: Admin can view "All Bookings" across the system.
+STEP 4: Admin can Update/Delete events or Approve/Reject bookings.
+
+3. BOOKING FLOW
+------------------------------------------------------------
+STEP 1: Logged-in user selects an event.
+STEP 2: User clicks "Book Now".
+STEP 3: Backend checks:
+        a) User authentication.
+        b) Seat availability.
+        c) Duplicate bookings.
+STEP 4: If valid, a new 'Booking' document is created in MongoDB.
+STEP 5: Success message is shown, and user sees booking in "My Bookings".
+
+4. EMAIL OTP FLOW
+------------------------------------------------------------
+ADMIN GMAIL (SMTP) → NODEMAILER → INTERNET → USER EMAIL INBOX
+
+- Triggered during Registration and Forgot Password.
+- Standard 5-minute expiration for security.
+- Uses Gmail App Passwords for secure SMTP authentication.
+
+5. SECURITY DESIGN
+------------------------------------------------------------
+- PASSWORD ENCRYPTION: Passwords stored as BCrypt hashes.
+- JWT AUTH: Routes protected by middleware checking token validity.
+- RATE LIMITING: Prevents brute-force attacks on OTP/Login.
+- DATA VALIDATION: Express-validator used to sanitize all inputs.

@@ -1,11 +1,12 @@
-# Day 5 — OTP System & Email Delivery
+DAY 5 — OTP SYSTEM & EMAIL DELIVERY
+===================================
 
-## Objective
+Objective
+---------
 Build a reliable OTP-based email verification and password-reset flow. Handle the challenge of sending transactional emails from a serverless environment where traditional SMTP is often blocked.
 
----
-
-## Features Implemented
+Features Implemented
+--------------------
 - 6-digit cryptographically random OTP generated with `crypto.randomInt`
 - OTP stored in user document with 10-minute expiry
 - 1-minute resend cooldown to prevent spam
@@ -15,11 +16,10 @@ Build a reliable OTP-based email verification and password-reset flow. Handle th
 - OTP cleared from DB after successful verification (no replay attacks)
 - Roll-back on email failure: user record deleted if created and email fails
 
----
+OTP Flow Diagrams
+-----------------
 
-## OTP Flow Diagrams
-
-### Signup Verification
+  Signup Verification
 ```
 POST /auth/register
   → validate input (Zod)
@@ -40,7 +40,7 @@ POST /auth/verify-otp
   → return JWT + user object
 ```
 
-### Password Reset
+  Password Reset
 ```
 POST /auth/forgot-password
   → find user by email (404 if not found)
@@ -60,11 +60,10 @@ POST /auth/reset-password
   → clear all reset OTP fields
 ```
 
----
+Email Delivery Architecture
+---------------------------
 
-## Email Delivery Architecture
-
-### Three-Tier Fallback
+  Three-Tier Fallback
 ```
 sendEmail()
   │
@@ -85,23 +84,19 @@ sendEmail()
         → else throw EMAIL_SERVICE_UNAVAILABLE
 ```
 
-### Why Resend over plain SMTP on Vercel?
+  Why Resend over plain SMTP on Vercel?
 Gmail SMTP (ports 587 and 465) is often blocked by AWS, which hosts Vercel functions. Resend uses an HTTPS API call — no TCP socket to port 25/465/587 — so it works reliably from any serverless environment.
 
----
-
-## Key Files
+Key Files
+---------
 | File | Purpose |
-|---|---|
 | `backend/utils/send-email.js` | Three-tier email sender (Resend / SMTP / console) |
 | `backend/utils/generate-otp.js` | `crypto.randomInt(100000, 999999)` — no Math.random |
 | `backend/services/auth-service.js` | OTP generation, storage, verification, expiry logic |
 
----
-
-## Environment Variables
+Environment Variables
+---------------------
 | Variable | Required | Description |
-|---|---|---|
 | `EMAIL_HOST` | For SMTP | `smtp.gmail.com` |
 | `EMAIL_PORT` | For SMTP | `465` (SSL) — not 587 on Vercel |
 | `EMAIL_USER` | For SMTP | Gmail address |
@@ -109,28 +104,23 @@ Gmail SMTP (ports 587 and 465) is often blocked by AWS, which hosts Vercel funct
 | `RESEND_API_KEY` | Recommended | From resend.com — enables reliable delivery |
 | `OTP_CONSOLE_FALLBACK` | Dev only | `true` → OTP printed to server logs |
 
----
-
-## Security Considerations
+Security Considerations
+-----------------------
 | Concern | Mitigation |
-|---|---|
 | OTP brute force | 10 req/15 min rate limit; OTP expires in 10 min |
 | OTP replay | OTP fields cleared immediately after successful verify |
 | Email enumeration | `forgot-password` returns 404 if email not found (intentional — debatable; can be changed to always-200 for privacy) |
 | OTP in logs | Console fallback for dev only; production should use Resend |
 
----
-
-## Challenges & Solutions
+Challenges & Solutions
+----------------------
 | Challenge | Solution |
-|---|---|
 | Gmail SMTP blocked on Vercel (AWS IP range) | Switched to port 465; added Resend API as primary delivery |
 | Email sends but OTP not reaching inbox | Resend requires domain verification for custom from-address; use `onboarding@resend.dev` for free tier |
 | Transporter reuse across warm Lambda invocations | Module-level `let transporter = null` singleton; reset to `null` on error |
 
----
-
-## Output
+Output
+------
 - Registration OTP flow works end-to-end
 - Password reset flow works end-to-end
 - OTPs visible in Vercel function logs when console fallback active

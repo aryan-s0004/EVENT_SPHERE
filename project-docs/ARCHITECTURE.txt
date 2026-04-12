@@ -1,0 +1,41 @@
+PROJECT ARCHITECTURE: EVENTSPHERE
+============================================================
+
+1. WHY MERN STACK?
+------------------------------------------------------------
+- MONGO DB: Document-oriented Database (NoSQL). Flexible JSON-like structure is perfect for events where details vary.
+- EXPRESS JS: Fast, unopinionated backend framework. Minimalist and scales well for REST APIs.
+- REACT JS: Component-based UI. Virtual DOM ensures smooth transitions and high performance.
+- NODE JS: JavaScript runtime for the server. Single-threaded, event-driven I/O makes it efficient.
+
+Using a single language (JavaScript) across the stack speeds up development and improves team collaboration.
+
+2. MVC DESIGN PATTERN
+------------------------------------------------------------
+The backend follows the Model-View-Controller (MVC) logic:
+- MODELS: Define data structure (User, Event, Booking schemas).
+- VIEWS: Handled by React (Frontend).
+- CONTROLLERS: Logic that processes requests and returns data.
+- ROUTES: Map URLs to specific controllers.
+
+Benefits: Separation of concerns, easier maintenance, and scalable codebase.
+
+3. SYSTEM COMMUNICATION FLOW
+------------------------------------------------------------
+A. Frontend → Backend:
+   - React components trigger API calls via Axios.
+   - JWT token is sent in the 'Authorization' header for secured routes.
+
+B. Backend → Database:
+   - Express controllers use Mongoose to query MongoDB Atlas.
+
+C. Backend → User:
+   - JSON responses are sent back (Success/Error).
+   - Email notifications are sent via SMTP/Resend API.
+
+4. VERCEL SERVERLESS ARCHITECTURE
+------------------------------------------------------------
+In production, the backend runs as Serverless Functions:
+- Any request to /api/* is routed to /api/index.js.
+- Database connections are pooled and managed per-request to handle cold starts.
+- Frontend assets are served via Vercel's Global Edge Network (CDN).

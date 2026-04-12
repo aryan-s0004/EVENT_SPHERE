@@ -1,0 +1,39 @@
+EMAIL & OTP SYSTEM: EVENTSPHERE
+============================================================
+
+1. NODEMAILER OVERVIEW
+------------------------------------------------------------
+Nodemailer is a module for Node.js applications to allow easy email sending.
+In EventSphere, it is used as the primary engine for SMTP delivery.
+
+2. GMAIL APP PASSWORDS
+------------------------------------------------------------
+Standard Gmail passwords do not work with third-party apps for security.
+- We use "App Passwords" generated from: myaccount.google.com/apppasswords
+- This provides a unique 16-character code that bypasses 2FA for the application.
+
+3. RESEND API REDUNDANCY (PRODUCTION Best Practice)
+------------------------------------------------------------
+Standard SMTP (Port 465/587) can sometimes be blocked by cloud providers like Vercel or AWS.
+EventSphere implements a Two-Tier system:
+1. Try RESEND API (Fast, HTTP-based, perfect for Serverless).
+2. Fallback to SMTP (Nodemailer/Gmail).
+3. Final Fallback: Log OTP to console (for development/testing).
+
+4. FLOW DIAGRAM
+------------------------------------------------------------
+[User Registration]
+      ↓
+[Backend generates 6-digit code]
+      ↓
+[Checks for Resend API Key] → (Yes) → [Send via API]
+      ↓ (No or Fails)
+[Connects to Gmail SMTP] → (Success) → [Send via SMTP]
+      ↓ (Fails)
+[Print OTP to Terminal/Logs] → (Fallback for monitoring)
+
+5. SECURITY MEASURES
+------------------------------------------------------------
+- No hardcoded emails or passwords (uses .env).
+- Rate-limiting applied to prevent email flooding.
+- Minimal data exposure in email content.

@@ -1,0 +1,38 @@
+DATABASE SCHEMA: EVENTSPHERE (MONGODB)
+============================================================
+
+1. USER COLLECTION
+------------------------------------------------------------
+- email: String (Unique, required)
+- password: String (Hashed)
+- role: Enum ['user', 'admin'] (Default: 'user')
+- isVerified: Boolean (Default: false)
+- otp: Object { code: String, expires: Date }
+- createdAt: Date
+
+2. EVENT COLLECTION
+------------------------------------------------------------
+- title: String (Required)
+- description: String
+- date: Date
+- location: String
+- image: String (URL/Base64)
+- createdBy: ObjectId (Reference: User)
+- price: Number
+- status: Enum ['active', 'past']
+
+3. BOOKING COLLECTION
+------------------------------------------------------------
+- userId: ObjectId (Reference: User)
+- eventId: ObjectId (Reference: Event)
+- status: Enum ['pending', 'confirmed', 'cancelled']
+- bookingDate: Date (Auto)
+- priceAtBooking: Number
+
+4. SCHEMA RELATIONSHIPS
+------------------------------------------------------------
+- One User → Many Bookings (One-to-Many)
+- One Event → Many Bookings (One-to-Many)
+- One User (Admin) → Many Events (One-to-Many)
+
+Data is joined using Mongoose .populate() for efficient retrieval of cross-document information (e.g., getting user details for a booking).

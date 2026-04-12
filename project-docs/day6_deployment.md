@@ -1,11 +1,12 @@
-# Day 6 — Production Deployment
+DAY 6 — PRODUCTION DEPLOYMENT
+=============================
 
-## Objective
+Objective
+---------
 Deploy the full MERN application to a single Vercel project — React SPA served as static files, Express API served as serverless functions — with zero separate hosting required.
 
----
-
-## Architecture: Unified Vercel Deployment
+Architecture: Unified Vercel Deployment
+---------------------------------------
 
 ```
 Browser
@@ -16,20 +17,18 @@ Browser
   └─ GET /assets/*          → Vercel CDN → frontend/dist/assets/
 ```
 
-### Why Vercel over Render for this project?
+  Why Vercel over Render for this project?
 | Factor | Vercel | Render |
-|---|---|---|
 | Frontend hosting | Built-in CDN | Separate static service |
 | Cold start | ~200ms | ~500ms (free tier) |
 | HTTPS | Automatic | Automatic |
 | Price (free tier) | 100 GB bandwidth | 750 hrs/month |
 | Deploys from Git | Yes (auto) | Yes (auto) |
 
-**Decision:** Vercel hosts both frontend and backend in a single project using the monorepo pattern — simpler config, one URL, no CORS issues in production (same origin).
+Decision: Vercel hosts both frontend and backend in a single project using the monorepo pattern — simpler config, one URL, no CORS issues in production (same origin).
 
----
-
-## vercel.json Explained
+vercel.json Explained
+---------------------
 ```json
 {
   "buildCommand": "cd frontend && npm install && npm run build",
@@ -46,9 +45,8 @@ Browser
 - First rewrite: all `/api/*` traffic → single Express serverless function
 - Second rewrite: all non-API routes → `index.html` (enables React client-side routing)
 
----
-
-## api/index.js — Serverless Entry Point
+api/index.js — Serverless Entry Point
+-------------------------------------
 ```js
 require('dotenv').config();
 const { connectDB } = require('../backend/db/index');
@@ -64,11 +62,10 @@ module.exports = async (req, res) => {
 - `connectDB()` called on every request but returns cached Mongoose connection
 - App factory pattern (`createApp()`) avoids global state issues in serverless
 
----
+Deployment Steps
+----------------
 
-## Deployment Steps
-
-### First-time setup
+  First-time setup
 ```bash
 # 1. Install Vercel CLI
 npm i -g vercel
@@ -94,7 +91,7 @@ vercel env add SEED_SECRET production     # any random string
 vercel --prod --yes
 ```
 
-### Subsequent deploys
+  Subsequent deploys
 ```bash
 # Auto-deploy: just push to main branch (if connected to GitHub)
 git push origin main
@@ -103,11 +100,9 @@ git push origin main
 vercel --prod --yes
 ```
 
----
-
-## Environment Variables Reference
+Environment Variables Reference
+-------------------------------
 | Variable | Example | Required | Notes |
-|---|---|---|---|
 | `MONGO_URI` | `mongodb+srv://user:pass@cluster.mongodb.net/EVENTSPHERE` | Yes | DB name must match exactly (case-sensitive) |
 | `JWT_SECRET` | 64-char hex string | Yes | Generate: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` |
 | `JWT_EXPIRE` | `7d` | Yes | |
@@ -121,9 +116,8 @@ vercel --prod --yes
 | `ADMIN_PASSWORD` | `Admin@1234!` | Yes | Used by `/api/seed` |
 | `SEED_SECRET` | `any-random-string` | Yes | Header required to call `/api/seed` |
 
----
-
-## Seeding the Database (First Deploy)
+Seeding the Database (First Deploy)
+-----------------------------------
 ```bash
 # Call the seed endpoint once after first deploy
 curl -X POST https://your-project.vercel.app/api/seed \
@@ -134,11 +128,9 @@ curl -X POST https://your-project.vercel.app/api/seed \
 # - 8 sample events across all categories
 ```
 
----
-
-## Common Errors & Fixes
+Common Errors & Fixes
+---------------------
 | Error | Cause | Fix |
-|---|---|---|
 | `db already exists with different case` | MONGO_URI has wrong DB name casing | Change to `EVENTSPHERE` (uppercase) to match Atlas |
 | `app.use() requires a middleware function` | Importing whole module instead of named export | `const { errorHandler } = require('./error-middleware')` |
 | `FUNCTION_INVOCATION_FAILED` | Crash inside serverless function | Check Vercel logs: Project → Functions → Expand logs |
@@ -146,16 +138,14 @@ curl -X POST https://your-project.vercel.app/api/seed \
 | `EMAIL_FAILED` on Vercel | Port 587 blocked by AWS | Switch to port 465 or use Resend API |
 | `404 on /api/events` | Vercel rewrite not matching | Ensure `vercel.json` rewrite source is `/api/(.*)` |
 
----
+Live URLs
+---------
+- Production: https://eventosphere.vercel.app
+- Health check: https://eventosphere.vercel.app/api/health
+- Vercel dashboard: https://vercel.com/aryan-sahus-projects-4ade9def/eventosphere
 
-## Live URLs
-- **Production:** https://event-sphere-navy.vercel.app
-- **Health check:** https://event-sphere-navy.vercel.app/api/health
-- **Vercel dashboard:** https://vercel.com/aryan-sahus-projects-4ade9def/event-sphere
-
----
-
-## Output
+Output
+------
 - Single Vercel project hosts both React SPA and Express API
 - Auto-deploys on every push to `main` branch
 - HTTPS, CDN, and serverless scaling included automatically

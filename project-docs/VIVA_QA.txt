@@ -1,0 +1,38 @@
+VIVA PREPARATION GUIDE: EVENTSPHERE
+============================================================
+
+BASIC LEVEL
+------------------------------------------------------------
+Q: What is a MERN stack?
+A: It's a collection of four technologies: MongoDB, Express, React, and Node.js used for full-stack JavaScript development.
+
+Q: What is the benefit of MongoDB?
+A: It is a NoSQL, document-oriented database. It allows for flexible schemas and handles large volumes of unstructured data efficiently using JSON-like formats.
+
+Q: What is JWT?
+A: JSON Web Token. It is used for securely transmitting information between parties as a JSON object. We use it for Stateless Authentication.
+
+INTERMEDIATE LEVEL
+------------------------------------------------------------
+Q: Why use MVC in this project?
+A: To separate the business logic (Controller), data structure (Model), and User Interface (View). It makes the code cleaner, easier to test, and more scalable.
+
+Q: What is a REST API?
+A: Representational State Transfer. It’s an architectural style for designing networked applications. It uses standard HTTP methods (GET, POST, PUT, DELETE).
+
+Q: How do you handle password security?
+A: We never store plain passwords. We use BCrypt to hash passwords with a salt before storing them in MongoDB.
+
+ADVANCED LEVEL
+------------------------------------------------------------
+Q: How does the Serverless backend work?
+A: Using Vercel, the backend isn't one "always-on" server. Instead, it spins up "Functions" on demand for each request. This saves on cost and automatically scales with traffic.
+
+Q: How do you prevent API overload?
+A: We implement Rate Limiting (using express-rate-limit). This restricts the number of requests a single IP can make within a time window, preventing DoS attacks.
+
+Q: How would you scale this system?
+A: 1. Use a Load Balancer to distribute traffic. 2. Implement Caching (Redis) for event lists to reduce DB hits. 3. Use Database Sharding to split the user data across multiple servers.
+
+Q: Explain the Email OTP Flow logic.
+A: It's a multi-tier fallback system. We prioritize Resend (API) for speed/reliability on Vercel, fallback to SMTP for cost-efficiency, and finally log to console for debugging.
