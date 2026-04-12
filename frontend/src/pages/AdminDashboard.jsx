@@ -89,7 +89,7 @@ export default function AdminDashboard() {
   const handleBookingAction = async (id, status) => {
     setActionKey(`booking-${id}-${status}`);
     try {
-      const res = await api.patch(`/bookings/admin/${id}/status`, { status });
+      const res = await api.patch(`/bookings/admin/${id}/process`, { status });
       toast.success(res.data.message || `Booking ${status}`);
       await fetchDashboardData({ silent: true });
     } catch (err) {
