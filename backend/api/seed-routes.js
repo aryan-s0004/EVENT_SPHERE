@@ -12,7 +12,6 @@
 'use strict';
 
 const { Router } = require('express');
-const bcrypt     = require('bcryptjs');
 const User       = require('../models/user');
 const Event      = require('../models/event');
 const asyncHandler = require('../utils/async-handler');
@@ -60,15 +59,15 @@ router.post('/', guardSeed, asyncHandler(async (req, res) => {
 
   let admin = await User.findOne({ email: adminEmail });
   if (admin) {
-    // Sync role, verified status, and password from env vars
+    // Set raw password — the User pre-save hook will bcrypt-hash it
     admin.role       = 'admin';
     admin.isVerified = true;
-    admin.password   = await bcrypt.hash(adminPass, 10);
-    await admin.save({ validateModifiedOnly: true });
+    admin.password   = adminPass;
+    await admin.save();
     log.push(`admin: synced password + role (${adminEmail})`);
   } else {
-    const hashed = await bcrypt.hash(adminPass, 10);
-    admin = await User.create({ name: adminName, email: adminEmail, password: hashed, role: 'admin', isVerified: true });
+    // Create with raw password — pre-save hook handles hashing
+    admin = await User.create({ name: adminName, email: adminEmail, password: adminPass, role: 'admin', isVerified: true });
     log.push(`admin: created (${adminEmail})`);
   }
 
